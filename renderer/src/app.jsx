@@ -12,10 +12,11 @@ import { SettingsView } from './settings';
 import { ServerSettingsView } from './serversettings';
 import { ProfileCard, StatusPopout } from './profile';
 import { EmojiPicker } from './picker';
-import { ContextMenu, Toasts, TooltipLayer, Positioned, Avatar, ChannelIcon, GroupIcon, Spinner, fmtDateTime } from './ui';
+import { ContextMenu, Toasts, TooltipLayer, Positioned, Avatar, ChannelIcon, GroupIcon, Spinner, fmtDateTime, Wallpaper, useIndicator } from './ui';
 import { Icon, LogoMark } from './icons';
 import { Md } from './message';
-import { initFx, fadeIn } from './fx';
+import { initFx, fadeIn, withTransition } from './fx';
+import { syncGlass, toggleGlass } from './glass';
 
 // ---------- Login ----------
 function Login() {
@@ -30,6 +31,7 @@ function Login() {
   const [busy, setBusy] = useState(false);
   const [hostBusy, setHostBusy] = useState(false);
   const [check, setCheck] = useState(0);
+  const [tabsRef, tabInd] = useIndicator();
 
   useEffect(() => {
     setInfo(null);
@@ -67,10 +69,8 @@ function Login() {
 
   return (
     <div class="login">
+      <Wallpaper />
       <div class="art">
-        <div class="blob" style={{ width: 260, height: 260, top: 60, left: 40, background: 'color-mix(in srgb, var(--accent) 60%, transparent)' }} />
-        <div class="blob" style={{ width: 180, height: 180, bottom: 120, right: 60, background: 'color-mix(in srgb, var(--accent2) 55%, transparent)', animationDelay: '-4s' }} />
-        <div class="blob" style={{ width: 110, height: 110, top: 80, right: 200, background: 'color-mix(in srgb, var(--accent3) 55%, transparent)', animationDelay: '-7s' }} />
         <div style={{ position: 'relative' }}>
           <div class="logo-mark" style={{ width: 56, height: 56, borderRadius: 18, marginBottom: 22 }}>
             <LogoMark size={32} />
@@ -88,7 +88,8 @@ function Login() {
       </div>
       <div class="form">
         <form class="box" onSubmit={submit}>
-          <div class="tabs">
+          <div class="tabs" ref={tabsRef}>
+            {tabInd}
             <button type="button" class={mode === 'login' ? 'on' : ''} onClick={() => setMode('login')}>Anmelden</button>
             <button type="button" class={mode === 'register' ? 'on' : ''} onClick={() => setMode('register')}>Registrieren</button>
           </div>
@@ -153,10 +154,18 @@ function ChannelHeader({ ch }) {
   return (
     <div class="chead">
       <button class="ibtn mobile-only" onClick={() => { S.mobileNav = 'nav'; update(); }}>
-          <Icon name="chevronRight" style={{ transform: 'rotate(180deg)' }} />
-        </button>
-        <div class="title">
-        {ch.type === 'dm' ? <Avatar uid={other} size={28} status /> : ch.type === 'group' ? <GroupIcon ch={ch} size={28} /> : <ChannelIcon ch={ch} size={20} />}
+        <Icon name="chevronRight" style={{ transform: 'rotate(180deg)' }} />
+      </button>
+      <div class="title">
+        {ch.type === 'dm' ? (
+          <Avatar uid={other} size={28} status />
+        ) : ch.type === 'group' ? (
+          <GroupIcon ch={ch} size={28} />
+        ) : (
+          <span class="tchip">
+            <ChannelIcon ch={ch} size={18} />
+          </span>
+        )}
         <span class="ellipsis" style={{ maxWidth: 320 }}>{channelTitle(ch)}</span>
       </div>
       {ch.topic && (
@@ -350,6 +359,10 @@ function applyTheme() {
   root.style.setProperty('--fs', 15 * prefs.fontScale + 'px');
   document.body.classList.toggle('compact', prefs.density === 'compact');
   document.body.classList.toggle('reduce-motion', prefs.reduceMotion);
+  // Liquid Glass: Materialien über das Attribut, Lichtbrechung über glass.js
+  if (prefs.glass) root.dataset.glass = prefs.glass;
+  else delete root.dataset.glass;
+  syncGlass();
   document.body.classList.add('platform-' + (window.nook?.platform || 'web'));
   const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
   const fg = getComputedStyle(root).getPropertyValue('--text2').trim();
@@ -372,6 +385,9 @@ function useHotkeys() {
       } else if (mod && e.shiftKey && e.key.toLowerCase() === 'd' && !window.nook?.globalHotkeys) {
         e.preventDefault();
         V.toggleDeafen();
+      } else if (mod && e.shiftKey && e.key.toLowerCase() === 'g') {
+        e.preventDefault();
+        withTransition(toggleGlass);
       } else if (mod && e.key === ',') {
         e.preventDefault();
         S.settings = { tab: 'account' };
@@ -416,6 +432,7 @@ function App() {
   const showMembers = prefs.showMembers && ch && ((serverId !== '@me' && ch.type !== 'voice' && ch.type !== 'stage') || ch.type === 'group') && !S.panel;
   return (
     <div class="app">
+      <Wallpaper />
       <TopBar />
       <div class={`main mnav-${S.mobileNav || 'nav'}`} style={{ gridTemplateColumns: showMembers ? '280px minmax(0,1fr) 260px' : '280px minmax(0,1fr)' }}>
         {serverId === '@me' ? <HomeSidebar /> : <ServerSidebar serverId={serverId} />}
@@ -471,6 +488,9 @@ window.__nook = { S, V };
 // Service Worker für die installierbare Handy-App (nur Web-Version)
 if (location.protocol.startsWith('http') && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 document.addEventListener('fullscreenchange', () => update());
+// Bewegter Hintergrund pausiert, solange Nook nicht im Fokus ist (z. B. beim Zocken) – spart Grafikleistung
+window.addEventListener('blur', () => document.body.classList.add('win-blur'));
+window.addEventListener('focus', () => document.body.classList.remove('win-blur'));
 // Globale Tastenkürzel (funktionieren auch, wenn Nook im Hintergrund ist)
 window.nook?.on?.('hotkey', (k) => {
   if (k === 'mute') V.toggleMute();

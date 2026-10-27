@@ -6,6 +6,11 @@ const PREF_DEFAULTS = {
   fontScale: 1,
   density: 'cozy',
   reduceMotion: false,
+  glass: '', // Liquid Glass: '' = aus, 'tinted' = getönt, 'clear' = klar
+  glassRefraction: true,
+  wallpaper: 'aurora',
+  wallpaperUrl: '',
+  wallpaperMotion: true,
   showEmbeds: true,
   autoplayGifs: true,
   inputDevice: '',

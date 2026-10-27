@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'preact/hooks';
-import { S, update, openModal, closeModal, openPopout, toast, confirmDialog } from './store';
+import { S, update, prefs, openModal, closeModal, openPopout, toast, confirmDialog } from './store';
 import { act, rpc, openDM, fileUrl, displayName, roleColor, copy, navigate, logout } from './api';
-import { Avatar, Name, NameText, STATUS_LABEL, StatusDot, Modal, ServerIcon, colorFor } from './ui';
+import { Avatar, Name, NameText, STATUS_LABEL, StatusDot, Modal, ServerIcon, colorFor, SegBox } from './ui';
 import { EffectLayer, Frame } from './cosmetics';
 import { Icon } from './icons';
 import { Md } from './message';
 import { V } from './voice';
 import { EmojiView, EmojiPicker } from './picker';
 import { memberMenu } from './sidebar';
+import { withTransition } from './fx';
+import { toggleGlass } from './glass';
 
 export { DECORATIONS, EFFECTS, NAME_FONTS as FONTS } from './cosmetics';
 
@@ -156,10 +158,10 @@ export function ProfileModal({ uid, serverId }) {
         <ProfileCard uid={uid} serverId={serverId} onClose={close} />
         {uid !== S.me.id && (
           <div class="pcard" style={{ width: 300, marginLeft: 10, padding: 16, display: 'flex', flexDirection: 'column' }}>
-            <div class="seg" style={{ marginBottom: 12 }}>
+            <SegBox style={{ marginBottom: 12 }}>
               <button class={tab === 'info' ? 'on' : ''} onClick={() => setTab('info')}>Gemeinsame Server</button>
               <button class={tab === 'friends' ? 'on' : ''} onClick={() => setTab('friends')}>Freunde</button>
-            </div>
+            </SegBox>
             <div style={{ overflowY: 'auto', flex: 1 }}>
               {!info && <div class="hint">Lade …</div>}
               {info && tab === 'info' && (info.mutualServers.length ? info.mutualServers.filter((id) => S.servers[id]).map((id) => (
@@ -215,6 +217,12 @@ export function StatusPopout({ close }) {
       <button class="menu-item" onClick={() => { close(); openModal('activity'); }}>
         <span>🎮</span>
         <span class="grow">{S.activities[me.id] ? `${S.activities[me.id].type} ${S.activities[me.id].name}` : 'Aktivität anzeigen'}</span>
+      </button>
+      <div class="menu-sep" />
+      <button class="menu-item" onClick={(e) => withTransition(toggleGlass, e)}>
+        <span>💧</span>
+        <span class="grow">Liquid Glass</span>
+        <span class={`switch sm ${prefs.glass ? 'on' : ''}`} />
       </button>
       <div class="menu-sep" />
       <button class="menu-item" onClick={() => { close(); openModal('profile', { uid: me.id }); }}>

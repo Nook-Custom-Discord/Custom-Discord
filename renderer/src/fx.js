@@ -39,9 +39,28 @@ function spot(e) {
   el.classList.add('spot-on');
 }
 
+// Werkzeugleiste einer Nachricht im sichtbaren Bereich der Liste halten – bei kurzen Nachrichten ragt sie
+// sonst hinaus, wird abgeschnitten und der Browser scrollt die Liste seitlich
+let toolsEl = null;
+function clampTools(e) {
+  const msg = e.target.closest?.('.msg');
+  const t = msg && [...msg.children].find((c) => c.classList.contains('msg-tools'));
+  if (!t || t === toolsEl) return;
+  toolsEl = t;
+  t.style.removeProperty('--tx');
+  const list = msg.closest('.msgs');
+  if (!list || !t.offsetWidth) return;
+  const box = list.getBoundingClientRect();
+  const left = msg.getBoundingClientRect().left + t.offsetLeft;
+  const right = left + t.offsetWidth;
+  const dx = left < box.left + 6 ? box.left + 6 - left : right > box.right - 6 ? box.right - 6 - right : 0;
+  if (dx) t.style.setProperty('--tx', Math.round(dx) + 'px');
+}
+
 export function initFx() {
   document.addEventListener('pointerdown', ripple, { passive: true });
   document.addEventListener('pointermove', spot, { passive: true });
+  document.addEventListener('pointerover', clampTools, { passive: true });
 }
 
 // Inhalt beim Wechsel (Kanal, Einstellungs-Seite) kurz einblenden

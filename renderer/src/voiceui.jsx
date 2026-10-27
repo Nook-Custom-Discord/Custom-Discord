@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, openModal, closeModal, openPopout, openMenu, toast } from './store';
 import { act, rpc, displayName, channelTitle, serverIdOf, voiceMembers, can, P, navigate, dismissCall, avatarOf, isVideoUrl, openDM, isElectron } from './api';
 import { V, QUALITY } from './voice';
-import { Avatar, Modal, Seg, Video, Name, Spinner, ServerIcon } from './ui';
+import { Avatar, Modal, Seg, SegBox, Video, Name, Spinner, ServerIcon } from './ui';
 import { Icon } from './icons';
 import { ChatView } from './chat';
 import { SoundboardPicker } from './picker';
@@ -421,14 +421,14 @@ export function ScreenShareModal() {
     >
       {isElectron && (
         <>
-          <div class="seg" style={{ marginBottom: 12, maxWidth: 300 }}>
+          <SegBox style={{ marginBottom: 12, maxWidth: 300 }}>
             <button class={tab === 'screen' ? 'on' : ''} onClick={() => setTab('screen')}>
               Bildschirme
             </button>
             <button class={tab === 'window' ? 'on' : ''} onClick={() => setTab('window')}>
               Fenster & Spiele
             </button>
-          </div>
+          </SegBox>
           {!sources ? (
             <div class="row" style={{ justifyContent: 'center', padding: 40 }}>
               <Spinner />
@@ -452,13 +452,13 @@ export function ScreenShareModal() {
       {!isElectron && <div class="hint" style={{ marginBottom: 12 }}>Dein Browser fragt gleich, was du teilen willst.</div>}
       <div class="field" style={{ marginTop: 16 }}>
         <label>Auflösung & Bildrate</label>
-        <div class="seg">
+        <SegBox>
           {Object.entries(QUALITY).map(([k, q]) => (
             <button class={quality === k ? 'on' : ''} onClick={() => setQuality(k)}>
               {q.label.replace(' · ', ' ')}
             </button>
           ))}
-        </div>
+        </SegBox>
       </div>
       <div class="row" style={{ alignItems: 'flex-start', gap: 20 }}>
         <div class="field grow">

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, closeModal, openModal, toast, confirmDialog } from './store';
 import { act, rpc, upload, pickAndUpload, pickAvatar, fileUrl, navigate, copy, displayName, channelTitle, serverIdOf, sortedChannels, dmList, can, P, sendMessage, openExternal, isUnread, openDM } from './api';
-import { Modal, Avatar, ServerIcon, ChannelIcon, GroupIcon, Seg, Switch, ToggleRow } from './ui';
+import { Modal, Avatar, ServerIcon, ChannelIcon, GroupIcon, Seg, SegBox, Switch, ToggleRow } from './ui';
 import { Icon } from './icons';
 import { ProfileModal, CustomStatusModal, ActivityModal } from './profile';
 import { ScreenShareModal } from './voiceui';
@@ -72,10 +72,10 @@ function CreateServerModal() {
   };
   return (
     <Modal title={tab === 'create' ? 'Eigenen Server erstellen' : 'Server beitreten'} sub={tab === 'create' ? 'Dein Ort für dich und deine Freunde. Du kannst alles später ändern.' : 'Gib einen Einladungscode ein, den du bekommen hast.'}>
-      <div class="seg" style={{ marginBottom: 18 }}>
+      <SegBox style={{ marginBottom: 18 }}>
         <button class={tab === 'create' ? 'on' : ''} onClick={() => setTab('create')}>Erstellen</button>
         <button class={tab === 'join' ? 'on' : ''} onClick={() => setTab('join')}>Beitreten</button>
-      </div>
+      </SegBox>
       {tab === 'create' ? (
         <>
           <div class="row" style={{ justifyContent: 'center', marginBottom: 18 }}>

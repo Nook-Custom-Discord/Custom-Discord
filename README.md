@@ -137,7 +137,11 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 - Status (Online/Abwesend/Bitte nicht stören/Unsichtbar), eigener Status mit Emoji & Ablaufzeit, Aktivität („Spielt …")
 - App-Themes (Tinte, Mitternacht, Dämmerung, Wald, Papier) mit kreisförmigem Überblenden, freie Akzentfarbe, Bubble- oder Kompakt-Layout, Schriftgröße
 - 8 Sound-Pakete (Nook, Kristall, Blubber, Retro, Lo-Fi, Sci-Fi, Marimba, Dezent), eigene Sound-Dateien pro Ereignis (auch als Klingelton), jedes Ereignis einzeln an/aus
-- Nook-2.0-Look: fließender Aurora-Hintergrund in der Akzentfarbe, durchscheinende Panels, leuchtende Verlaufs-Blasen für eigene Nachrichten, Sprachkacheln mit Schallwellen und schwebender Steuerleiste
+
+**Design & Liquid Glass**
+- Komplett neu gebaute Oberfläche: schwebende Glas-Kapseln oben (Logo, Server-Tabs, Suche mit Strg+K, Profil), Kanal-Symbole als leuchtende Chips, Verlaufs-Blasen für eigene Nachrichten, gleitende Auswahl-Markierungen in allen Tab-Leisten, Einstellungen mit Symbolen, schwebende Steuerleiste im Call, Sprachkacheln mit Schallwellen
+- **Liquid Glass** (Darstellung → Liquid Glass, Status-Menü oder **Strg+Umschalt+G**): Leisten, Panels, Menüs und Dialoge werden zu durchsichtigem Glas, dein Hintergrund schimmert durch. In der App, in Chrome und Edge bricht das Glas das Licht an den Kanten wie eine echte Linse; dazu wandert ein Lichtreflex unter dem Mauszeiger mit. Nachrichten laufen unter der Kopfzeile und dem Eingabefeld durch. Zwei Varianten: **Getönt** und **Klar**. Funktioniert mit allen Themes, auch mit dem hellen.
+- 9 Hintergründe (Aurora in deiner Akzentfarbe, Sonnenuntergang, Ozean, Nebel mit Sternen, Bonbon, Wald, Lava, Prisma, Bokeh) oder ein eigenes Bild. Sie treiben langsam und pausieren automatisch, wenn Nook nicht im Fokus ist (z. B. beim Zocken).
 - Animierte Oberfläche: Klick-Wellen, Licht-Effekt auf Karten, gestaffelt einblendende Listen, weiche Kanal- und Seitenwechsel (abschaltbar über „Animationen reduzieren")
 
 **Verwaltung**
@@ -164,6 +168,6 @@ npm run deploy       # Oberfläche LIVE an alle verteilen (ohne Neuinstallation)
 
 **Live-Updates:** Die App lädt ihre Oberfläche beim Start vom Nook-Server. `npm run deploy` legt die neue Version in den `ui`-Ordner des Servers (`%APPDATA%\Nook\server-data\ui`), der Server merkt das und alle verbundenen Apps laden sich automatisch neu (wer gerade im Call ist, bekommt einen Hinweis und das Update nach dem Auflegen). Nur Änderungen an `main.js`, `preload.js` oder dem Server selbst brauchen eine Neuinstallation.
 
-Aufbau: `main.js` (Electron-Hauptprozess), `server/` (Express + Socket.IO + JSON-Datenbank), `renderer/src/` (Oberfläche mit Preact, gebündelt mit esbuild), `shared/perms.js` (Berechtigungen).
+Aufbau: `main.js` (Electron-Hauptprozess), `server/` (Express + Socket.IO + JSON-Datenbank), `renderer/src/` (Oberfläche mit Preact, gebündelt mit esbuild; `glass.js` erzeugt die Lichtbrechung für Liquid Glass als SVG-Filter), `shared/perms.js` (Berechtigungen).
 
 > Hinweis für Windows: Liegt der Projektordner sehr tief (Pfad > 200 Zeichen), scheitert der Installer-Build an einem NSIS-Pfadlimit. Dann den Ordner z. B. nach `C:\nook` kopieren und dort bauen.

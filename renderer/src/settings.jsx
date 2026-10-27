@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, confirmDialog, promptDialog, toast } from './store';
 import { act, rpc, pickAndUpload, pickAvatar, pickFile, upload, fileUrl, logout, displayName, isElectron, copy, AVATAR_VIDEO_MAX_S } from './api';
-import { Avatar, Switch, ToggleRow, Seg, Video, Spinner } from './ui';
+import { Avatar, Switch, ToggleRow, Seg, SegBox, Video, Spinner, useIndicator, WALLPAPERS, wallpaperId } from './ui';
 import { Icon } from './icons';
 import { ProfileCard } from './profile';
 import { DECORATIONS, EFFECTS, NAMEPLATES, NAME_FONTS, NAME_EFFECTS, FRAMES, BUNDLES, Frame, EffectLayer } from './cosmetics';
@@ -10,6 +10,7 @@ import { V, QUALITY } from './voice';
 import { previewSound, PACKS, SOUND_EVENTS } from './sounds';
 import { clearMarkdownCache } from './markdown';
 import { fadeIn, withTransition } from './fx';
+import { setGlass, refractionSupported } from './glass';
 
 export const THEMES = [
   ['ink', 'Tinte', ['#0b0d12', '#151922', '#1e2430']],
@@ -152,6 +153,7 @@ function Profile() {
   const [p, setP] = useState(() => profileState(me));
   const [tab, setTab] = useState('general');
   const [busy, setBusy] = useState(false);
+  const [tabsRef, tabInd] = useIndicator();
   const set = (k, v) => setP({ ...p, [k]: v });
   const dirty = JSON.stringify(p) !== JSON.stringify(profileState(me));
   const save = async () => {
@@ -174,7 +176,8 @@ function Profile() {
       <div class="hint" style={{ marginTop: -14, marginBottom: 18 }}>
         ✨ Alles freigeschaltet: animierte Avatare & Banner (GIF), Profil-Farbthemen, animierte Avatar-Dekorationen, Profilrahmen, Profil-Effekte und Namens-Stile.
       </div>
-      <div class="ptabs">
+      <div class="ptabs" ref={tabsRef}>
+        {tabInd}
         {PROFILE_TABS.map(([v, l]) => (
           <button class={tab === v ? 'on' : ''} onClick={() => setTab(v)}>
             {l}
@@ -454,10 +457,93 @@ function Privacy() {
 }
 
 // ---------- Darstellung ----------
+// Mini-Hintergrund für Vorschauen (gleiche Klassen wie der echte Hintergrund)
+function WallpaperThumb({ id }) {
+  return (
+    <div class={`wallpaper thumb wp-${id}`} style={id === 'custom' && prefs.wallpaperUrl ? { '--wp-img': `url("${fileUrl(prefs.wallpaperUrl)}")` } : null}>
+      <i />
+      <i />
+      <i />
+    </div>
+  );
+}
+
+const GLASS_MODES = [
+  ['', 'Aus'],
+  ['tinted', '💧 Getönt'],
+  ['clear', '🫧 Klar'],
+];
+
 function Appearance() {
+  const wp = wallpaperId();
+  // vorhandenes eigenes Bild zuerst auswählen, ein weiterer Klick tauscht es aus
+  const pickWallpaper = async () => {
+    if (prefs.wallpaperUrl && wp !== 'custom') return withTransition(() => setPref('wallpaper', 'custom'));
+    const r = await pickAndUpload('image/*');
+    if (!r) return;
+    setPref('wallpaperUrl', r.url);
+    withTransition(() => setPref('wallpaper', 'custom'));
+  };
   return (
     <>
       <h1>Darstellung</h1>
+      <Section title="Liquid Glass">
+        <div class="card lg-card">
+          <div class="lg-demo" aria-hidden="true">
+            <WallpaperThumb id={wp} />
+            <div class="lg-glass">
+              <span class="lg-dot" />
+              <span class="lg-line" />
+              <span class="lg-line short" />
+            </div>
+          </div>
+          <div class="grow" style={{ minWidth: 0 }}>
+            <b class="lg-title">Glas, das Licht bricht</b>
+            <div class="hint">Leisten, Fenster und Menüs werden zu durchsichtigem Glas: Dein Hintergrund schimmert durch und wird an den Kanten wie von einer Linse gebogen. Schnell umschalten mit Strg+Umschalt+G.</div>
+            <SegBox style={{ marginTop: 14 }}>
+              {GLASS_MODES.map(([v, l]) => (
+                <button class={prefs.glass === v ? 'on' : ''} onClick={(e) => withTransition(() => setGlass(v), e)}>
+                  {l}
+                </button>
+              ))}
+            </SegBox>
+          </div>
+        </div>
+        {prefs.glass &&
+          (refractionSupported() ? (
+            <ToggleRow title="Lichtbrechung an den Kanten" desc="Echte Verzerrung des Hintergrunds – braucht etwas mehr Grafikleistung" on={prefs.glassRefraction} onChange={(v) => setPref('glassRefraction', v)} />
+          ) : (
+            <div class="hint" style={{ marginTop: 10 }}>Dieser Browser kann nur den Weichzeichner. Die echte Lichtbrechung gibt es in der Nook-App, in Chrome und in Edge.</div>
+          ))}
+      </Section>
+      <Section title="Hintergrund">
+        <div class="wp-grid">
+          {WALLPAPERS.map(([id, name, desc]) => (
+            <button class={`wp-opt ${wp === id ? 'on' : ''}`} onClick={(e) => withTransition(() => setPref('wallpaper', id), e)}>
+              <div class="wp-prev">
+                <WallpaperThumb id={id} />
+              </div>
+              <div class="tn">{name}</div>
+              <div class="td">{desc}</div>
+            </button>
+          ))}
+          <button class={`wp-opt ${wp === 'custom' ? 'on' : ''}`} onClick={pickWallpaper}>
+            <div class="wp-prev">
+              {prefs.wallpaperUrl ? (
+                <WallpaperThumb id="custom" />
+              ) : (
+                <div class="wp-add">
+                  <Icon name="upload" />
+                </div>
+              )}
+            </div>
+            <div class="tn">Eigenes Bild</div>
+            <div class="td">{!prefs.wallpaperUrl ? 'Bild hochladen' : wp === 'custom' ? 'Klicken zum Ändern' : 'Dein Bild'}</div>
+          </button>
+        </div>
+        <ToggleRow title="Bewegter Hintergrund" desc="Die Farbwolken treiben ganz langsam" on={prefs.wallpaperMotion} onChange={(v) => setPref('wallpaperMotion', v)} />
+        {!prefs.glass && <div class="hint">Tipp: Am schönsten wirkt der Hintergrund mit Liquid Glass – ohne ist er nur leicht zu sehen.</div>}
+      </Section>
       <Section title="Farbschema">
         <div class="row" style={{ flexWrap: 'wrap' }}>
           {THEMES.map(([id, name, c]) => (
@@ -861,6 +947,7 @@ function Keybinds() {
     [['Umschalt', 'Enter'], 'Neue Zeile'],
     [['Umschalt', 'Klick'], 'Auf Reaktion: Super-Reaktion · Auf Löschen: ohne Nachfrage'],
     [['Strg', ','], 'Einstellungen'],
+    [['Strg', 'Umschalt', 'G'], 'Liquid Glass ein/aus'],
   ];
   return (
     <>
@@ -1003,19 +1090,22 @@ export function SettingsView() {
     fadeIn(mainRef.current);
   }, [tab]);
   const tabs = [
-    ['Benutzer', [['account', 'Mein Konto'], ['profile', 'Profil'], ['privacy', 'Datenschutz']]],
-    ['App', [['appearance', 'Darstellung'], ['voice', 'Sprache & Video'], ['notifications', 'Benachrichtigungen'], ['sounds', 'Sounds'], ['keybinds', 'Tastenkürzel'], isElectron && ['host', 'Server hosten'], isElectron && ['app', 'App & Autostart'], ['about', 'Über Nook']]],
+    ['Benutzer', [['account', 'Mein Konto', 'at'], ['profile', 'Profil', 'smile'], ['privacy', 'Datenschutz', 'shield']]],
+    ['App', [['appearance', 'Darstellung', 'palette'], ['voice', 'Sprache & Video', 'mic'], ['notifications', 'Benachrichtigungen', 'bell'], ['sounds', 'Sounds', 'volume'], ['keybinds', 'Tastenkürzel', 'keyboard'], isElectron && ['host', 'Server hosten', 'server'], isElectron && ['app', 'App & Autostart', 'gear'], ['about', 'Über Nook', 'sparkle']]],
   ];
+  const [navRef, navInd] = useIndicator();
   const C = { account: Account, profile: Profile, privacy: Privacy, appearance: Appearance, voice: Voice, notifications: Notifications, sounds: Sounds, keybinds: Keybinds, host: Host, app: AppSettings, about: About }[tab] || Account;
   return (
     <div class="settings">
       <nav>
-        <div class="inner">
+        <div class="inner" ref={navRef}>
+          {navInd}
           {tabs.map(([h, items]) => (
             <>
               <div class="sh">{h}</div>
-              {items.filter(Boolean).map(([id, l]) => (
+              {items.filter(Boolean).map(([id, l, ic]) => (
                 <button class={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
+                  <Icon name={ic} size={18} />
                   {l}
                 </button>
               ))}
@@ -1023,6 +1113,7 @@ export function SettingsView() {
           ))}
           <div class="divider" />
           <button class="danger" onClick={async () => (await confirmDialog('Abmelden', 'Wirklich abmelden?', { ok: 'Abmelden' })) && logout()}>
+            <Icon name="logout" size={18} />
             Abmelden
           </button>
         </div>

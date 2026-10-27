@@ -117,6 +117,8 @@ function MessageList({ ch }) {
   const [, rerender] = useState(0);
   const onScroll = async (e) => {
     const el = e.target;
+    // nie seitlich verschieben (überstehende Elemente können die Liste sonst seitlich scrollen)
+    if (el.scrollLeft) el.scrollLeft = 0;
     const was = atBottom.current;
     atBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
     prevHeight.current = el.scrollHeight;
@@ -142,11 +144,11 @@ function MessageList({ ch }) {
           {groups.map((g) =>
             g.sep === 'day' ? (
               <div class="day-sep" key={g.key}>
-                {fmtDay(g.ts)}
+                <span>{fmtDay(g.ts)}</span>
               </div>
             ) : g.sep === 'new' ? (
               <div class="new-sep" key={g.key}>
-                Neu
+                <span>Neu</span>
               </div>
             ) : g.system ? (
               <Message key={g.key} m={g.msgs[0]} ch={ch} serverId={serverId} />
@@ -383,6 +385,7 @@ let typingSent = 0;
 export function Composer({ ch }) {
   const sid = serverIdOf(ch);
   const ta = useRef();
+  const wrap = useRef();
   const [text, setText] = useState(S.drafts[ch.id] || '');
   const [caret, setCaret] = useState(0);
   const [sel, setSel] = useState(0);
@@ -398,6 +401,16 @@ export function Composer({ ch }) {
     setFiles([]);
     ta.current?.focus();
   }, [ch.id]);
+
+  // Höhe des Schreibfelds merken: im Liquid-Glass-Modus laufen die Nachrichten darunter durch
+  useEffect(() => {
+    const el = wrap.current;
+    const chat = el?.closest('.chat');
+    if (!chat || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => chat.style.setProperty('--composer-h', el.offsetHeight + 'px'));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   useEffect(() => {
     setSel(0);
   }, [ac?.type, ac?.items.length]);
@@ -648,7 +661,7 @@ export function Composer({ ch }) {
     ]);
 
   return (
-    <div class="composer-wrap">
+    <div class="composer-wrap" ref={wrap}>
       {acOpen && (
         <div class="autocomplete">
           <div class="ah">{{ slash: 'Befehle', mention: 'Mitglieder & Rollen', channel: 'Kanäle', emoji: 'Emojis' }[ac.type]}</div>

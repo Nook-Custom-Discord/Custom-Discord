@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { S, update, openModal, confirmDialog, toast } from './store';
 import { act, openDM, displayName, voiceMembers, channelTitle, navigate, serverIdOf } from './api';
-import { Avatar, STATUS_LABEL, Name } from './ui';
+import { Avatar, STATUS_LABEL, Name, useIndicator } from './ui';
 import { Icon } from './icons';
 import { V } from './voice';
 import { memberMenu } from './sidebar';
@@ -172,6 +172,7 @@ function ActiveNow() {
 
 export function FriendsView() {
   const tab = S.view.homeTab || 'online';
+  const [tabsRef, tabInd] = useIndicator();
   const setTab = (t) => {
     S.view.homeTab = t;
     update();
@@ -223,12 +224,16 @@ export function FriendsView() {
     <>
       <div class="chead">
         <button class="ibtn mobile-only" onClick={() => { S.mobileNav = 'nav'; update(); }}>
-            <Icon name="chevronRight" style={{ transform: 'rotate(180deg)' }} />
-          </button>
-          <div class="title">
-          <Icon name="users" size={20} /> Freunde
+          <Icon name="chevronRight" style={{ transform: 'rotate(180deg)' }} />
+        </button>
+        <div class="title">
+          <span class="tchip">
+            <Icon name="users" size={18} />
+          </span>
+          Freunde
         </div>
-        <div class="friends-tabs">
+        <div class="friends-tabs" ref={tabsRef}>
+          {tabInd}
           <button class={`ftab ${tab === 'online' ? 'active' : ''}`} onClick={() => setTab('online')}>Online</button>
           <button class={`ftab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>Alle</button>
           <button class={`ftab ${tab === 'pending' ? 'active' : ''}`} onClick={() => setTab('pending')}>

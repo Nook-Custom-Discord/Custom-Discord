@@ -7,6 +7,8 @@ import { V } from './voice';
 import { VoiceCard, voiceUserMenu } from './voiceui';
 import { EmojiView } from './picker';
 
+const IS_MAC = window.nook?.platform === 'darwin' || /Mac/.test(navigator.platform);
+
 // ---------- Obere Leiste ----------
 export function TopBar() {
   const order = prefs.serverOrder.filter((id) => S.servers[id]);
@@ -41,45 +43,48 @@ export function TopBar() {
         Nook
         {homeBadge > 0 && <span class="badge">{homeBadge}</span>}
       </button>
-      <div style={{ width: 1, height: 26, background: 'var(--line2)', margin: '0 4px', flex: 'none' }} />
-      <div class="stabs">
-        {order.map((id) => {
-          const s = S.servers[id];
-          const { unread, mentions } = serverUnread(id);
-          const active = S.view.serverId === id;
-          const inVoice = V.serverId === id;
-          return (
-            <button
-              class={`stab ${active ? 'active' : ''} ${unread && !active ? 'unread' : ''} ${overId === id && dragId !== id ? 'dragover' : ''}`}
-              draggable
-              onDragStart={() => setDragId(id)}
-              onDragOver={(e) => { e.preventDefault(); setOverId(id); }}
-              onDragEnd={() => { setDragId(null); setOverId(null); }}
-              onDrop={() => {
-                if (!dragId || dragId === id) return;
-                const o = order.filter((x) => x !== dragId);
-                o.splice(o.indexOf(id), 0, dragId);
-                setPref('serverOrder', o);
-                setDragId(null);
-                setOverId(null);
-              }}
-              onClick={() => navigate(id)}
-              onContextMenu={(e) => serverMenu(e, s)}
-            >
-              <ServerIcon server={s} />
-              <span class="ellipsis">{s.name}</span>
-              {inVoice && <Icon name="speaker" size={14} style={{ color: 'var(--ok)', flex: 'none' }} />}
-              {mentions > 0 && <span class="badge">{mentions}</span>}
-            </button>
-          );
-        })}
+      <div class="sdock">
+        <div class="stabs">
+          {order.map((id) => {
+            const s = S.servers[id];
+            const { unread, mentions } = serverUnread(id);
+            const active = S.view.serverId === id;
+            const inVoice = V.serverId === id;
+            return (
+              <button
+                class={`stab ${active ? 'active' : ''} ${unread && !active ? 'unread' : ''} ${overId === id && dragId !== id ? 'dragover' : ''}`}
+                draggable
+                onDragStart={() => setDragId(id)}
+                onDragOver={(e) => { e.preventDefault(); setOverId(id); }}
+                onDragEnd={() => { setDragId(null); setOverId(null); }}
+                onDrop={() => {
+                  if (!dragId || dragId === id) return;
+                  const o = order.filter((x) => x !== dragId);
+                  o.splice(o.indexOf(id), 0, dragId);
+                  setPref('serverOrder', o);
+                  setDragId(null);
+                  setOverId(null);
+                }}
+                onClick={() => navigate(id)}
+                onContextMenu={(e) => serverMenu(e, s)}
+              >
+                <ServerIcon server={s} size={26} />
+                <span class="ellipsis">{s.name}</span>
+                {inVoice && <Icon name="speaker" size={14} style={{ color: 'var(--ok)', flex: 'none' }} />}
+                {mentions > 0 && <span class="badge">{mentions}</span>}
+              </button>
+            );
+          })}
+        </div>
+        <button class="stab-add" data-tip="Server erstellen oder beitreten" onClick={() => openModal('createServer')}>
+          <Icon name="plus" />
+        </button>
       </div>
-      <button class="stab-add" data-tip="Server erstellen oder beitreten" onClick={() => openModal('createServer')}>
-        <Icon name="plus" />
-      </button>
       <div class="spacer" />
-      <button class="ibtn" data-tip="Schnell wechseln (Strg+K)" onClick={() => openModal('quickSwitch')}>
-        <Icon name="search" />
+      <button class="search-pill" data-tip="Schnell wechseln" onClick={() => openModal('quickSwitch')}>
+        <Icon name="search" size={16} />
+        <span class="sp-t">Suchen</span>
+        <span class="kbd">{IS_MAC ? '⌘K' : 'Strg K'}</span>
       </button>
       <button class="me-chip" onClick={(e) => openPopout(e, 'status', { prefer: 'bottom' })}>
         <Avatar uid={me.id} size={32} status />
@@ -228,6 +233,7 @@ export function ServerSidebar({ serverId }) {
       <div class="sb-head">
         {s.banner && <div class="sb-banner" style={{ backgroundImage: `url(${fileUrl(s.banner)})` }} />}
         <button class="sb-title" onClick={headerMenu}>
+          <ServerIcon server={s} size={28} />
           <span class="grow ellipsis">{s.name}</span>
           <Icon name="chevron" size={18} />
         </button>
@@ -392,6 +398,7 @@ export function MemberList({ serverId, ch }) {
         {groups.map((g) => (
           <>
             <div class="sb-section">
+              {g.color && <i class="rdot" style={{ background: g.color }} />}
               {g.name} — {g.ids.length}
             </div>
             {g.ids.map((id) => (

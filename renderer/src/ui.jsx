@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useLayoutEffect } from 'preact/hooks';
-import { S, update, closeModal } from './store';
+import { S, update, closeModal, prefs } from './store';
 import { avatarOf, displayName, fileUrl, isVideoUrl } from './api';
 import { Icon } from './icons';
 import { Deco, nameClasses, nameVars } from './cosmetics';
@@ -145,15 +145,49 @@ export function ToggleRow({ title, desc, on, onChange }) {
   );
 }
 
+// Gleitender Auswahl-Indikator: misst das aktive Kind (.on/.active) des Containers und schiebt
+// ein .ind-Element dorthin (gleitet per CSS-Transition mit Feder-Kurve).
+export function useIndicator() {
+  const ref = useRef();
+  const [box, setBox] = useState(null);
+  const measure = () => {
+    const c = ref.current;
+    const a = c && [...c.children].find((x) => x.classList.contains('on') || x.classList.contains('active'));
+    const nb = a ? { x: a.offsetLeft, y: a.offsetTop, w: a.offsetWidth, h: a.offsetHeight } : null;
+    setBox((b) => (b === nb || (b && nb && b.x === nb.x && b.y === nb.y && b.w === nb.w && b.h === nb.h) ? b : nb));
+  };
+  useLayoutEffect(measure);
+  useEffect(() => {
+    const c = ref.current;
+    if (!c || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => measure());
+    ro.observe(c);
+    return () => ro.disconnect();
+  }, []);
+  const ind = box && <span class="ind" style={{ transform: `translate(${box.x}px, ${box.y}px)`, width: box.w + 'px', height: box.h + 'px' }} />;
+  return [ref, ind];
+}
+
+// Segment-Leiste mit eigenem Inhalt (Kinder tragen selbst die Klasse .on)
+export function SegBox({ children, style }) {
+  const [ref, ind] = useIndicator();
+  return (
+    <div class="seg" ref={ref} style={style}>
+      {ind}
+      {children}
+    </div>
+  );
+}
+
 export function Seg({ value, options, onChange }) {
   return (
-    <div class="seg">
+    <SegBox>
       {options.map(([v, label]) => (
         <button class={v === value ? 'on' : ''} onClick={() => onChange(v)}>
           {label}
         </button>
       ))}
-    </div>
+    </SegBox>
   );
 }
 
@@ -284,14 +318,48 @@ export function Positioned({ rect, children, prefer = 'right', onClose }) {
   );
 }
 
+const TOAST_ICON = { success: 'check', error: 'x', info: 'sparkle' };
 export function Toasts() {
   return (
     <div class="toasts">
       {S.toasts.map((t) => (
         <div class={`toast ${t.kind}`} key={t.id}>
-          {t.text}
+          <span class="ti">
+            <Icon name={TOAST_ICON[t.kind] || 'bell'} size={14} />
+          </span>
+          <span>{t.text}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ---------- Hintergrund ----------
+// Farbwolken bzw. eigenes Bild hinter der ganzen App. Im normalen Modus gedämpft,
+// im Liquid-Glass-Modus voll sichtbar, damit das Glas etwas zum Brechen hat.
+export const WALLPAPERS = [
+  ['aurora', 'Aurora', 'Deine Akzentfarbe'],
+  ['sunset', 'Sonnenuntergang', 'Orange, Pink, Lila'],
+  ['ocean', 'Ozean', 'Türkis & Blau'],
+  ['nebula', 'Nebel', 'Galaxie mit Sternen'],
+  ['candy', 'Bonbon', 'Pastell'],
+  ['forest', 'Wald', 'Grün & Petrol'],
+  ['lava', 'Lava', 'Rot & Gold'],
+  ['prism', 'Prisma', 'Lichtstrahlen'],
+  ['bokeh', 'Bokeh', 'Leuchtende Kreise'],
+];
+// gewählter Hintergrund (eigenes Bild nur, wenn auch eins hochgeladen ist)
+export function wallpaperId() {
+  if (prefs.wallpaper === 'custom') return prefs.wallpaperUrl ? 'custom' : 'aurora';
+  return WALLPAPERS.some(([w]) => w === prefs.wallpaper) ? prefs.wallpaper : 'aurora';
+}
+export function Wallpaper() {
+  const id = wallpaperId();
+  return (
+    <div class={`wallpaper wp-${id} ${prefs.wallpaperMotion ? '' : 'still'}`} style={id === 'custom' ? { '--wp-img': `url("${fileUrl(prefs.wallpaperUrl)}")` } : null} aria-hidden="true">
+      <i />
+      <i />
+      <i />
     </div>
   );
 }
