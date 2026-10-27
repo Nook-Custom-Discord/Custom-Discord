@@ -20,10 +20,12 @@ Nook besteht aus **einer App** für alle. Einer aus eurer Gruppe (der **Host**) 
 
 ## 1. App herunterladen
 
+Die neueste Version gibt es unter **[Releases](https://github.com/Nook-Custom-Discord/Custom-Discord/releases/latest)**.
+
 | System  | Datei | Hinweis |
 |---------|-------|---------|
-| Windows | `Nook-Setup-1.0.0.exe` | Beim ersten Start meckert evtl. der SmartScreen („Unbekannter Herausgeber") → **Weitere Informationen → Trotzdem ausführen**. |
-| macOS   | `Nook-1.0.0-mac.dmg` | Da die App nicht bei Apple registriert ist: Nook in „Programme" ziehen, dann **Rechtsklick → Öffnen → Öffnen**. Falls „beschädigt" angezeigt wird, im Terminal einmal `xattr -cr /Applications/Nook.app` ausführen. |
+| Windows | `Nook-Setup-1.3.0.exe` | Beim ersten Start meckert evtl. der SmartScreen („Unbekannter Herausgeber") → **Weitere Informationen → Trotzdem ausführen**. |
+| macOS   | `Nook-1.3.0-mac.dmg` | Da die App nicht bei Apple registriert ist: Nook in „Programme" ziehen, dann **Rechtsklick → Öffnen → Öffnen**. Falls „beschädigt" angezeigt wird, im Terminal einmal `xattr -cr /Applications/Nook.app` ausführen. |
 
 ### Wie bekommen meine Freunde die App?
 
@@ -37,7 +39,7 @@ Nook besteht aus **einer App** für alle. Einer aus eurer Gruppe (der **Host**) 
 3. Unter **Actions** läuft jetzt „Build & Release". Nach ca. 10 Minuten liegen unter **Releases** die `.exe` (Windows) und `.dmg` (Mac).
 4. Den Release-Link an deine Freunde schicken – fertig.
 
-**Variante B – direkt verschicken:** Die fertige `Nook-Setup-1.0.0.exe` liegt im Ordner `dist/`. Die kannst du einfach per Google Drive, OneDrive, WeTransfer o. ä. teilen. (Die Mac-Version kann nur auf einem Mac oder per Variante A gebaut werden.)
+**Variante B – direkt verschicken:** Die fertige `Nook-Setup-<Version>.exe` liegt im Ordner `dist/`. Die kannst du einfach per Google Drive, OneDrive, WeTransfer o. ä. teilen. (Die Mac-Version kann nur auf einem Mac oder per Variante A gebaut werden.)
 
 ---
 
