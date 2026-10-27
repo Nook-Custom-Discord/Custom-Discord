@@ -266,42 +266,105 @@ function onOut(e) {
   if (!e.relatedTarget) unshine();
 }
 
-// Durchsichtiges Fenster (nur Desktop-App): 'blur' = Desktop scheint verschwommen durch (Windows 11 / macOS),
-// 'clear' = Fenster komplett durchsichtig, Apps dahinter scharf sichtbar. Was das System kann, weiß nur der
-// Hauptprozess – bis zur Antwort bleibt alles, wie es ist.
-let winCaps = null; // { blur, clear }
+// Fenster-Modus (nur Desktop-App): 'blur' = Desktop scheint verschwommen durch (Windows 11 / macOS),
+// 'live' = echtes Glas über den Apps hinter Nook (Windows 10 2004+): der Bildschirm hinter dem Fenster kommt als
+// Live-Bild hinter die Oberfläche, darüber wirkt das normale Glas mit Unschärfe, Lichtbrechung und Glanz.
+// Was das System kann, weiß nur der Hauptprozess – bis zur Antwort bleibt alles, wie es ist.
+let winCaps = null; // { blur, live }
 let winSent = null;
-let winNow = ''; // Modus, mit dem das aktuelle Fenster läuft
 if (window.nook?.setTransparent)
   window.nook
     .getConfig()
     .then((c) => {
-      winCaps = { blur: !!(c.blurSupported ?? c.transparentSupported), clear: !!c.clearSupported && !!window.nook.setWindowMode };
-      winNow = winSent = c.windowMode ?? (c.transparent ? 'blur' : '');
-      // frühere Einstellung „Fenster durchsichtig“ übernehmen
+      winCaps = { blur: !!(c.blurSupported ?? c.transparentSupported), live: !!c.liveSupported && !!window.nook.liveGlass };
+      winSent = c.windowMode ?? (c.transparent ? 'blur' : '');
+      // frühere Einstellungen übernehmen („Fenster durchsichtig“, „komplett durchsichtig“)
       if (prefs.windowMode == null && prefs.windowGlass) prefs.windowMode = 'blur';
+      if (prefs.windowMode === 'clear') prefs.windowMode = 'live';
       update();
     })
     .catch(() => {});
-export const windowCaps = () => winCaps || { blur: false, clear: false };
-// läuft das Fenster komplett durchsichtig? Dann zeichnet die Oberfläche die Fensterknöpfe selbst
-export const windowIsClear = () => winNow === 'clear';
+export const windowCaps = () => winCaps || { blur: false, live: false };
+
+// ---------- Live-Bild hinter dem Glas ----------
+let live = null; // { stream, video, geom }
+let liveWant = false;
+let liveBusy = false;
+function placeLive() {
+  const g = live?.geom;
+  if (!g) return;
+  Object.assign(live.video.style, { width: g.w + 'px', height: g.h + 'px', transform: `translate(${-g.x}px, ${-g.y}px)` });
+}
+async function startLive() {
+  if (live || liveBusy) return;
+  liveBusy = true;
+  try {
+    const info = await window.nook.liveGlass(true);
+    if (!info || !liveWant) throw new Error('aus');
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: info.sourceId, maxWidth: Math.round(info.w * info.scale), maxHeight: Math.round(info.h * info.scale), maxFrameRate: 30 } },
+    });
+    if (!liveWant) {
+      stream.getTracks().forEach((t) => t.stop());
+      throw new Error('aus');
+    }
+    const video = document.createElement('video');
+    video.className = 'live-glass';
+    video.muted = true;
+    video.autoplay = true;
+    video.srcObject = stream;
+    document.body.prepend(video);
+    live = { stream, video, geom: info };
+    placeLive();
+    setLiveRate(document.hasFocus());
+  } catch {
+    if (liveWant) window.nook.liveGlass(false);
+  }
+  liveBusy = false;
+}
+function stopLive() {
+  if (!live) return;
+  live.stream.getTracks().forEach((t) => t.stop());
+  live.video.remove();
+  live = null;
+  window.nook.liveGlass(false);
+}
+// im Hintergrund reichen weniger Bilder pro Sekunde
+function setLiveRate(focused) {
+  live?.stream.getVideoTracks()[0]?.applyConstraints({ frameRate: { max: focused ? 30 : 10 } }).catch(() => {});
+}
+if (window.nook?.liveGlass) {
+  window.nook.on('live-geom', (g) => {
+    if (!live) return;
+    // anderer Bildschirm -> neue Quelle
+    if (g.displayId !== live.geom.displayId || g.w !== live.geom.w || g.h !== live.geom.h) {
+      stopLive();
+      startLive();
+      return;
+    }
+    live.geom = { ...live.geom, ...g };
+    placeLive();
+  });
+  window.addEventListener('focus', () => setLiveRate(true));
+  window.addEventListener('blur', () => setLiveRate(false));
+}
 
 // Wird bei jedem Rendern aufgerufen (applyTheme) und gleicht den Zustand mit den Einstellungen ab
 export function syncGlass() {
   if (winCaps) {
     const m = prefs.windowMode || '';
-    const want = winCaps[m] ? m : '';
-    // Das Fenster bleibt durchsichtig, auch wenn Glas kurz aus ist (Umschalten auf „komplett durchsichtig“ baut
-    // das Fenster neu auf); ohne Glas deckt die Oberfläche einfach alles ab.
+    // ohne Glas deckt die Oberfläche alles ab, dann braucht es auch kein durchsichtiges Fenster
+    const want = prefs.glass && winCaps[m] ? m : '';
     if (want !== winSent) {
       winSent = want;
       if (window.nook.setWindowMode) window.nook.setWindowMode(want);
       else window.nook.setTransparent(want === 'blur');
-      if ((want === 'clear') === (winNow === 'clear')) winNow = want;
     }
-    const shown = prefs.glass ? winNow : '';
-    if (shown) document.documentElement.dataset.winglass = shown;
+    liveWant = want === 'live';
+    if (liveWant) startLive();
+    else stopLive();
+    if (want) document.documentElement.dataset.winglass = want;
     else delete document.documentElement.dataset.winglass;
   }
   const want = prefs.glass || '';

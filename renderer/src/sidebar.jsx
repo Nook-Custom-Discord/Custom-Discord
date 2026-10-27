@@ -6,27 +6,8 @@ import { Icon, LogoMark } from './icons';
 import { V } from './voice';
 import { VoiceCard, voiceUserMenu } from './voiceui';
 import { EmojiView } from './picker';
-import { windowIsClear } from './glass';
 
 const IS_MAC = window.nook?.platform === 'darwin' || /Mac/.test(navigator.platform);
-
-// Fensterknöpfe für das komplett durchsichtige Fenster (dann gibt es keine vom System)
-function WindowControls() {
-  const ctl = (a) => window.nook.winCtl(a);
-  return (
-    <div class="win-ctls">
-      <button data-tip="Minimieren" onClick={() => ctl('minimize')}>
-        <svg viewBox="0 0 12 12" width="12" height="12"><path d="M1.5 6h9" stroke="currentColor" stroke-width="1.3" /></svg>
-      </button>
-      <button data-tip="Maximieren" onClick={() => ctl('maximize')}>
-        <svg viewBox="0 0 12 12" width="12" height="12"><rect x="1.5" y="1.5" width="9" height="9" rx="2" fill="none" stroke="currentColor" stroke-width="1.3" /></svg>
-      </button>
-      <button class="close" data-tip="Schließen" onClick={() => ctl('close')}>
-        <svg viewBox="0 0 12 12" width="12" height="12"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /></svg>
-      </button>
-    </div>
-  );
-}
 
 // ---------- Obere Leiste ----------
 export function TopBar() {
@@ -112,7 +93,6 @@ export function TopBar() {
           <div class="s ellipsis">{me.customStatus?.text || STATUS_LABEL[me.status]}</div>
         </div>
       </button>
-      {windowIsClear() && window.nook?.platform !== 'darwin' && <WindowControls />}
     </div>
   );
 }

@@ -20,12 +20,12 @@ contextBridge.exposeInMainWorld('nook', {
   setTitleBar: (color, symbolColor) => ipcRenderer.send('titlebar', { color, symbolColor }),
   setTransparent: (on) => ipcRenderer.send('set-transparent', !!on),
   setWindowMode: (mode) => ipcRenderer.send('set-window-mode', mode),
-  winCtl: (action) => ipcRenderer.send('win-ctl', action),
+  liveGlass: (on) => ipcRenderer.invoke('live-glass', !!on),
   isFocused: () => ipcRenderer.invoke('is-focused'),
   idleTime: () => ipcRenderer.invoke('idle-time'),
   notify: (opts) => ipcRenderer.send('notify', opts),
   on: (channel, fn) => {
-    const ok = ['focus', 'notification-click', 'system-idle', 'hotkey'];
+    const ok = ['focus', 'notification-click', 'system-idle', 'hotkey', 'live-geom'];
     if (!ok.includes(channel)) return;
     ipcRenderer.on(channel, (e, ...args) => fn(...args));
   },

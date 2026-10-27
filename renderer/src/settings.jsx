@@ -504,36 +504,28 @@ function GlassSlider({ label, k, left, right }) {
   );
 }
 
-// Fenster: normal, Desktop verschwommen dahinter oder komplett durchsichtig (nur Desktop-App)
+// Fenster: normal, Desktop verschwommen dahinter oder echtes Glas über den Apps (nur Desktop-App)
 function WindowModePicker() {
   const caps = windowCaps();
-  if (!caps.blur && !caps.clear) return null;
+  if (!caps.blur && !caps.live) return null;
   const mode = caps[prefs.windowMode] ? prefs.windowMode : '';
-  const opts = [['', '🖥️ Normal'], caps.blur && ['blur', '🌫️ Desktop verschwommen'], caps.clear && ['clear', '🪟 Komplett durchsichtig']].filter(Boolean);
+  const opts = [['', '🖥️ Normal'], caps.blur && ['blur', '🌫️ Desktop verschwommen'], caps.live && ['live', '🍏 Glas über deinen Apps']].filter(Boolean);
   return (
     <div class="field lg-window">
-      <label>Fenster</label>
+      <label>Hinter dem Fenster</label>
       <SegBox>
         {opts.map(([v, l]) => (
-          <button
-            class={mode === v ? 'on' : ''}
-            onClick={async () => {
-              const reload = (v === 'clear') !== (mode === 'clear');
-              if (reload && V.channelId && !(await confirmDialog('Nook lädt kurz neu', 'Dafür wird das Fenster neu aufgebaut und dein Anruf getrennt. Trotzdem umschalten?', { ok: 'Umschalten', danger: false }))) return;
-              setPref('windowMode', v);
-            }}
-          >
+          <button class={mode === v ? 'on' : ''} onClick={(e) => withTransition(() => setPref('windowMode', v), e)}>
             {l}
           </button>
         ))}
       </SegBox>
       <div class="hint" style={{ marginTop: 8 }}>
-        {mode === 'clear'
-          ? 'Du siehst die Apps hinter Nook gestochen scharf – wie Glas bei iOS. Mit „Durchsichtigkeit“ und „Glasfarbe“ stellst du ein, wie viel die Flächen abdecken.'
+        {mode === 'live'
+          ? 'Nook liegt wie Apple-Glas über den Apps dahinter: Mit „Unschärfe“, „Lichtbrechung“ und „Durchsichtigkeit“ stellst du ein, wie stark. Damit sich Nook nicht selbst sieht, ist es dafür in Screenshots und Bildschirmübertragungen ausgeblendet.'
           : mode === 'blur'
-            ? 'Dein Desktop scheint weich verschwommen durch die ganze App.'
-            : 'Das Fenster deckt alles dahinter ab.'}
-        {caps.clear && ' Beim Wechsel zu oder von „Komplett durchsichtig“ lädt Nook kurz neu (ein laufender Anruf wird dabei getrennt).'}
+            ? 'Dein Desktop scheint weich verschwommen durch die ganze App (Glas vom System).'
+            : 'Hinter Nook liegt dein gewählter Hintergrund.'}
       </div>
     </div>
   );

@@ -57,14 +57,15 @@ function localIPs() {
 // Fenster-Modus für Liquid Glass:
 //   ''      normal
 //   'blur'  Desktop scheint verschwommen durch (Windows 11 22H2+ mit Acryl, macOS mit Vibrancy)
-//   'clear' Fenster komplett durchsichtig, Apps dahinter gestochen scharf sichtbar. Geht nur beim Erstellen
-//           des Fensters – beim Umschalten wird es neu aufgebaut; die Fensterknöpfe zeichnet dann die Oberfläche.
+//   'live'  echtes Glas über den Apps dahinter: die Oberfläche bekommt den Bildschirm hinter dem Fenster als
+//           Live-Bild und legt ihr eigenes Glas (Unschärfe, Lichtbrechung, Glanz) darüber. Nook selbst wird dafür
+//           aus Bildschirmaufnahmen ausgeblendet (Windows 10 2004+), sonst würde es sich selbst aufnehmen.
 const blurSupported = () => process.platform === 'darwin' || (process.platform === 'win32' && Number(os.release().split('.')[2] || 0) >= 22621);
-const clearSupported = () => ['win32', 'darwin', 'linux'].includes(process.platform);
+const liveSupported = () => (process.platform === 'win32' && Number(os.release().split('.')[2] || 0) >= 19041) || !!process.env.NOOK_LIVE_GLASS_TEST;
 function windowMode() {
   const m = config.windowMode ?? (config.transparent ? 'blur' : '');
   if (m === 'blur') return blurSupported() ? 'blur' : '';
-  return m === 'clear' && clearSupported() ? 'clear' : '';
+  return m === 'live' && liveSupported() ? 'live' : '';
 }
 function applyBlur(on) {
   if (!win || !blurSupported()) return;
@@ -74,37 +75,29 @@ function applyBlur(on) {
     win.setBackgroundColor(on ? '#00000000' : '#0d0f14');
   } catch {}
 }
-let clearWin = false; // aktuelles Fenster ist komplett durchsichtig
-let restoreBounds = null; // durchsichtige Fenster lassen sich unter Windows nicht nativ maximieren -> selbst machen
-function toggleMaximize() {
-  if (!win) return;
-  if (!clearWin) return win.isMaximized() ? win.unmaximize() : win.maximize();
-  if (restoreBounds) {
-    win.setBounds(restoreBounds);
-    restoreBounds = null;
-  } else {
-    restoreBounds = win.getBounds();
-    win.setBounds(screen.getDisplayMatching(restoreBounds).workArea);
-  }
+// Lage des Fensters auf seinem Bildschirm (für das Live-Bild hinter dem Glas)
+let liveOn = false;
+function liveGeom() {
+  const cb = win.getContentBounds();
+  const d = screen.getDisplayMatching(cb);
+  return { x: cb.x - d.bounds.x, y: cb.y - d.bounds.y, w: d.bounds.width, h: d.bounds.height, scale: d.scaleFactor, displayId: String(d.id) };
+}
+function sendGeom() {
+  if (liveOn && win && !win.isDestroyed()) win.webContents.send('live-geom', liveGeom());
 }
 
-function createWindow(bounds) {
+function createWindow() {
   const mode = windowMode();
-  clearWin = mode === 'clear';
-  restoreBounds = null;
   win = new BrowserWindow({
-    width: bounds?.width || 1360,
-    height: bounds?.height || 860,
-    x: bounds?.x,
-    y: bounds?.y,
+    width: 1360,
+    height: 860,
     minWidth: 960,
     minHeight: 600,
-    backgroundColor: clearWin ? '#00000000' : '#0d0f14',
-    transparent: clearWin,
+    backgroundColor: '#0d0f14',
     show: false,
     icon: iconPath,
     titleBarStyle: 'hidden',
-    titleBarOverlay: process.platform === 'darwin' || clearWin ? false : { color: '#0d0f14', symbolColor: '#c9cdd8', height: 52 },
+    titleBarOverlay: process.platform === 'darwin' ? false : { color: '#0d0f14', symbolColor: '#c9cdd8', height: 52 },
     trafficLightPosition: { x: 16, y: 18 },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -152,6 +145,8 @@ function createWindow(bounds) {
     win.webContents.send('focus', true);
   });
   win.on('blur', () => win.webContents.send('focus', false));
+  win.on('move', sendGeom);
+  win.on('resize', sendGeom);
 }
 
 function createTray() {
@@ -281,38 +276,32 @@ ipcMain.handle('get-config', () => ({
   version: app.getVersion(),
   platform: process.platform,
   blurSupported: blurSupported(),
-  clearSupported: clearSupported(),
+  liveSupported: liveSupported(),
   windowMode: windowMode(),
   // ältere Oberflächen kennen nur „durchsichtig ja/nein“
   transparentSupported: blurSupported(),
   transparent: windowMode() === 'blur',
 }));
 function setWindowMode(mode) {
-  const before = windowMode();
-  config.windowMode = mode === 'blur' || mode === 'clear' ? mode : '';
+  config.windowMode = mode === 'blur' || mode === 'live' ? mode : '';
   delete config.transparent;
   writeConfig(config);
-  const after = windowMode();
-  if (!win || after === before) return;
-  if ((after === 'clear') === clearWin) return applyBlur(after === 'blur');
-  // Wechsel von/zu „komplett durchsichtig“: neues Fenster an gleicher Stelle, altes erst danach schließen
-  const old = win;
-  const wasMax = !!restoreBounds || old.isMaximized();
-  const bounds = restoreBounds || old.getNormalBounds();
-  createWindow(bounds);
-  win.once('ready-to-show', () => {
-    if (wasMax) toggleMaximize();
-    old.destroy();
-  });
+  applyBlur(windowMode() === 'blur');
 }
 ipcMain.on('set-window-mode', (e, mode) => setWindowMode(mode));
-ipcMain.on('set-transparent', (e, on) => setWindowMode(on ? 'blur' : ''));
-ipcMain.on('win-ctl', (e, action) => {
-  if (!win) return;
-  if (action === 'minimize') win.minimize();
-  if (action === 'maximize') toggleMaximize();
-  if (action === 'close') win.close();
+// Live-Bild für echtes Glas: Nook aus Aufnahmen ausblenden und die passende Bildschirm-Quelle liefern
+ipcMain.handle('live-glass', async (e, on) => {
+  liveOn = !!on && liveSupported() && !!win;
+  try {
+    win?.setContentProtection(liveOn);
+  } catch {}
+  if (!liveOn) return null;
+  const g = liveGeom();
+  const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } });
+  const src = sources.find((x) => x.display_id === g.displayId) || sources[0];
+  return src ? { ...g, sourceId: src.id } : null;
 });
+ipcMain.on('set-transparent', (e, on) => setWindowMode(on ? 'blur' : ''));
 ipcMain.handle('set-config', (e, c) => {
   if (c.closeToTray !== undefined) config.closeToTray = !!c.closeToTray;
   if (c.autoStart !== undefined) app.setLoginItemSettings({ openAtLogin: !!c.autoStart, openAsHidden: true });
@@ -335,7 +324,7 @@ ipcMain.on('open-external', (e, url) => {
   if (/^https?:\/\//.test(url)) shell.openExternal(url);
 });
 ipcMain.on('titlebar', (e, { color, symbolColor }) => {
-  if (process.platform !== 'darwin' && !clearWin && win?.setTitleBarOverlay) {
+  if (process.platform !== 'darwin' && win?.setTitleBarOverlay) {
     try {
       win.setTitleBarOverlay({ color, symbolColor, height: 52 });
     } catch {}
