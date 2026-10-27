@@ -9,6 +9,10 @@ const PREF_DEFAULTS = {
   glass: '', // Liquid Glass: '' = aus, 'tinted' = getönt, 'clear' = klar
   glassRefraction: true,
   glassClarity: 50, // Durchsichtigkeit des Glases in % (50 = Standard)
+  glassBlur: 50, // Unschärfe hinter dem Glas in % (0 = gestochen scharf durchsehen)
+  glassRefractStr: 50, // Stärke der Lichtbrechung an den Kanten in %
+  glassShine: 50, // Glanz: Lichtkanten und Reflex in %
+  glassTint: '', // Glasfarbe: '' = passend zum Theme, 'white', 'black', 'accent' oder #rrggbb
   windowGlass: false, // Fenster durchsichtig, Desktop scheint durch (nur Desktop-App)
   wallpaper: 'aurora',
   wallpaperUrl: '',

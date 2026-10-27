@@ -3858,6 +3858,87 @@ img.emoji {
   font-size: 12.5px;
   color: var(--muted);
 }
+/* „Glas anpassen“: fertige Stile, Regler, Glasfarben */
+.lg-custom {
+  margin-top: 14px;
+}
+.lg-styles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+.lg-style {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  border-radius: 14px;
+  font-weight: 750;
+  font-size: 13.5px;
+  color: var(--text2);
+  background: var(--mat-field);
+  border: 1px solid var(--glass-line);
+  transition: transform 0.25s var(--spring), border-color 0.15s, color 0.15s, background 0.15s;
+}
+.lg-style:hover {
+  transform: translateY(-2px);
+  color: var(--text);
+}
+.lg-style.on {
+  color: var(--text);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--mat-field));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.lg-style span {
+  font-size: 17px;
+}
+.lg-slider label b {
+  margin-left: 4px;
+  color: var(--text);
+  text-transform: none;
+}
+.lg-range input {
+  flex: 1;
+}
+.lg-range span {
+  width: 64px;
+  flex: none;
+}
+.lg-range span:last-child {
+  text-align: right;
+}
+.lg-tints {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.lg-tint {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  background: var(--c);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 2px 8px -2px rgba(0, 0, 0, 0.5);
+  transition: transform 0.25s var(--spring), box-shadow 0.15s;
+}
+.lg-tint:hover {
+  transform: scale(1.1);
+}
+.lg-tint.on {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+.lg-tint.custom input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
 .lg-card {
   display: flex;
   align-items: center;
@@ -3895,8 +3976,8 @@ img.emoji {
   column-gap: 10px;
   row-gap: 7px;
   padding: 0 14px;
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(8px) saturate(1.8);
+  background: color-mix(in srgb, var(--glass-tint, #fff) min(100%, calc(12% * var(--glass-o, 1))), transparent);
+  backdrop-filter: blur(calc(8px * var(--glass-b, 1))) saturate(1.8);
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 10px 24px -10px rgba(0, 0, 0, 0.6);
   animation: lg-float 6s ease-in-out infinite;
@@ -7126,31 +7207,32 @@ video.img {
   --line2: rgba(255, 255, 255, 0.16);
   --hover: rgba(255, 255, 255, 0.07);
   --active: rgba(255, 255, 255, 0.13);
-  --rim: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
-  --rim-strong: inset 0 1px 0 rgba(255, 255, 255, 0.32), inset 0 -1px 0 rgba(255, 255, 255, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  /* --glass-o: Regler „Durchsichtigkeit“ (1 = Standard, 0 = ganz klar, 2 = fast deckend) */
-  --mat-panel: color-mix(in srgb, var(--panel) min(100%, calc(46% * var(--glass-o, 1))), transparent);
-  --mat-panel-fx: blur(26px) saturate(1.7);
+  /* Regler aus „Glas anpassen“ (app.jsx, 1 = Standard): --glass-o Tönung (0 = ganz klar), --glass-b Unschärfe,
+     --glass-s Glanz, --glass-tint eigene Glasfarbe (sonst die Theme-Farbe) */
+  --rim: inset 0 1px 0 rgb(255 255 255 / min(1, calc(0.2 * var(--glass-s, 1)))), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --rim-strong: inset 0 1px 0 rgb(255 255 255 / min(1, calc(0.32 * var(--glass-s, 1)))), inset 0 -1px 0 rgb(255 255 255 / min(1, calc(0.05 * var(--glass-s, 1)))), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --mat-panel: color-mix(in srgb, var(--glass-tint, var(--panel)) min(100%, calc(46% * var(--glass-o, 1))), transparent);
+  --mat-panel-fx: blur(calc(26px * var(--glass-b, 1))) saturate(1.7);
   --mat-raised: rgb(255 255 255 / calc(0.055 * var(--glass-o, 1)));
-  --mat-float: color-mix(in srgb, var(--panel2) min(100%, calc(52% * var(--glass-o, 1))), transparent);
-  --mat-float-fx: blur(20px) saturate(1.8);
-  --mat-field: color-mix(in srgb, var(--bg) min(100%, calc(32% * var(--glass-o, 1))), transparent);
+  --mat-float: color-mix(in srgb, var(--glass-tint, var(--panel2)) min(100%, calc(52% * var(--glass-o, 1))), transparent);
+  --mat-float-fx: blur(calc(20px * var(--glass-b, 1))) saturate(1.8);
+  --mat-field: color-mix(in srgb, var(--glass-tint, var(--bg)) min(100%, calc(32% * var(--glass-o, 1))), transparent);
   --elev-1: 0 10px 30px -14px rgba(0, 0, 0, 0.5);
   --elev-2: 0 16px 40px -16px rgba(0, 0, 0, 0.55);
   --elev-3: 0 30px 80px -24px rgba(0, 0, 0, 0.65);
-  --glass-hi: rgba(255, 255, 255, 0.1);
+  --glass-hi: rgb(255 255 255 / min(1, calc(0.1 * var(--glass-s, 1))));
 }
 /* Klar: fast unsichtbares Glas, kaum Weichzeichner, stärkere Brechung */
 [data-glass='clear'] {
   --wp-dim: 0;
   --glass-line: rgba(255, 255, 255, 0.22);
-  --mat-panel: rgb(12 14 20 / calc(0.2 * var(--glass-o, 1)));
-  --mat-panel-fx: blur(8px) saturate(1.5);
+  --mat-panel: color-mix(in srgb, var(--glass-tint, rgb(12 14 20)) min(100%, calc(20% * var(--glass-o, 1))), transparent);
+  --mat-panel-fx: blur(calc(8px * var(--glass-b, 1))) saturate(1.5);
   --mat-raised: rgb(255 255 255 / calc(0.07 * var(--glass-o, 1)));
-  --mat-float: rgb(14 16 22 / calc(0.24 * var(--glass-o, 1)));
-  --mat-float-fx: blur(4px) saturate(1.6);
-  --mat-field: rgb(0 0 0 / calc(0.22 * var(--glass-o, 1)));
-  --glass-hi: rgba(255, 255, 255, 0.16);
+  --mat-float: color-mix(in srgb, var(--glass-tint, rgb(14 16 22)) min(100%, calc(24% * var(--glass-o, 1))), transparent);
+  --mat-float-fx: blur(calc(4px * var(--glass-b, 1))) saturate(1.6);
+  --mat-field: color-mix(in srgb, var(--glass-tint, #000) min(100%, calc(22% * var(--glass-o, 1))), transparent);
+  --glass-hi: rgb(255 255 255 / min(1, calc(0.16 * var(--glass-s, 1))));
 }
 /* Helles Theme: weißes Glas über einem aufgehellten Hintergrund */
 [data-theme='paper'][data-glass] {
@@ -7160,22 +7242,22 @@ video.img {
   --line2: rgba(0, 0, 0, 0.12);
   --hover: rgba(255, 255, 255, 0.4);
   --active: rgba(255, 255, 255, 0.6);
-  --rim: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-  --rim-strong: inset 0 1px 0 #fff, inset 0 -1px 0 rgba(255, 255, 255, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
-  --mat-panel: color-mix(in srgb, var(--panel) min(100%, calc(50% * var(--glass-o, 1))), transparent);
+  --rim: inset 0 1px 0 rgb(255 255 255 / min(1, calc(0.9 * var(--glass-s, 1)))), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  --rim-strong: inset 0 1px 0 rgb(255 255 255 / min(1, var(--glass-s, 1))), inset 0 -1px 0 rgb(255 255 255 / min(1, calc(0.4 * var(--glass-s, 1)))), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  --mat-panel: color-mix(in srgb, var(--glass-tint, var(--panel)) min(100%, calc(50% * var(--glass-o, 1))), transparent);
   --mat-raised: rgb(255 255 255 / calc(0.4 * var(--glass-o, 1)));
-  --mat-float: color-mix(in srgb, var(--panel) min(100%, calc(58% * var(--glass-o, 1))), transparent);
+  --mat-float: color-mix(in srgb, var(--glass-tint, var(--panel)) min(100%, calc(58% * var(--glass-o, 1))), transparent);
   --mat-field: rgb(255 255 255 / calc(0.35 * var(--glass-o, 1)));
   --elev-1: 0 10px 30px -14px rgba(40, 30, 10, 0.25);
   --elev-2: 0 16px 40px -16px rgba(40, 30, 10, 0.3);
   --elev-3: 0 30px 80px -24px rgba(40, 30, 10, 0.35);
-  --glass-hi: rgba(255, 255, 255, 0.55);
+  --glass-hi: rgb(255 255 255 / min(1, calc(0.55 * var(--glass-s, 1))));
 }
 [data-theme='paper'][data-glass='clear'] {
   --wp-dim: 0.22;
-  --mat-panel: rgb(255 255 255 / calc(0.24 * var(--glass-o, 1)));
+  --mat-panel: color-mix(in srgb, var(--glass-tint, #fff) min(100%, calc(24% * var(--glass-o, 1))), transparent);
   --mat-raised: rgb(255 255 255 / calc(0.3 * var(--glass-o, 1)));
-  --mat-float: rgb(255 255 255 / calc(0.3 * var(--glass-o, 1)));
+  --mat-float: color-mix(in srgb, var(--glass-tint, #fff) min(100%, calc(30% * var(--glass-o, 1))), transparent);
   --mat-field: rgb(255 255 255 / calc(0.3 * var(--glass-o, 1)));
 }
 [data-theme='paper'] .wallpaper {
@@ -7275,7 +7357,7 @@ video.img {
 
 /* Nachrichten */
 [data-glass] .bubble:not(.mention-me) {
-  background: color-mix(in srgb, var(--panel2) min(100%, calc(58% * var(--glass-o, 1))), transparent);
+  background: color-mix(in srgb, var(--glass-tint, var(--panel2)) min(100%, calc(58% * var(--glass-o, 1))), transparent);
   border-color: var(--glass-line);
 }
 [data-theme='paper'][data-glass] .bubble:not(.mention-me) {
@@ -7306,16 +7388,16 @@ video.img {
   --lg-blur: 6;
 }
 [data-glass] .modal {
-  background-color: color-mix(in srgb, var(--panel2) 74%, transparent);
+  background-color: color-mix(in srgb, var(--glass-tint, var(--panel2)) min(100%, calc(40% + 34% * var(--glass-o, 1))), transparent);
 }
 [data-glass='clear'] .modal {
-  background-color: color-mix(in srgb, var(--panel2) 50%, transparent);
+  background-color: color-mix(in srgb, var(--glass-tint, var(--panel2)) min(100%, calc(30% + 20% * var(--glass-o, 1))), transparent);
 }
 [data-theme='paper'][data-glass] .modal {
   background-color: color-mix(in srgb, var(--panel) 80%, transparent);
 }
 [data-glass] :is(.picker, .menu, .autocomplete) {
-  background-color: color-mix(in srgb, var(--panel2) 66%, transparent);
+  background-color: color-mix(in srgb, var(--glass-tint, var(--panel2)) min(100%, calc(36% + 30% * var(--glass-o, 1))), transparent);
 }
 [data-theme='paper'][data-glass] :is(.picker, .menu, .autocomplete) {
   background-color: color-mix(in srgb, var(--panel) 72%, transparent);
@@ -7374,10 +7456,12 @@ html[data-winglass] body,
 }
 
 /* Klar: Schrift bekommt einen leichten Schatten, damit sie auf jedem Hintergrund lesbar bleibt */
-[data-glass='clear'] :is(.app, .login) {
+[data-glass='clear'] :is(.app, .login),
+[data-glass-thin] :is(.app, .login) {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
-[data-theme='paper'][data-glass='clear'] :is(.app, .login) {
+[data-theme='paper'][data-glass='clear'] :is(.app, .login),
+[data-theme='paper'][data-glass-thin] :is(.app, .login) {
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
 }
 

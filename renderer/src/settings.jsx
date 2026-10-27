@@ -474,6 +474,102 @@ const GLASS_MODES = [
   ['clear', '🫧 Klar'],
 ];
 
+// fertige Glas-Stile: Variante + Regler (Durchsichtigkeit, Unschärfe, Lichtbrechung, Glanz)
+const GLASS_STYLES = [
+  ['standard', 'Standard', '💧', { glass: 'tinted', glassClarity: 50, glassBlur: 50, glassRefractStr: 50, glassShine: 50 }],
+  ['see', 'Durchsicht', '👀', { glass: 'clear', glassClarity: 85, glassBlur: 10, glassRefractStr: 70, glassShine: 70 }],
+  ['crystal', 'Kristall', '💎', { glass: 'clear', glassClarity: 100, glassBlur: 0, glassRefractStr: 100, glassShine: 100 }],
+  ['frost', 'Milchglas', '🌫️', { glass: 'tinted', glassClarity: 30, glassBlur: 100, glassRefractStr: 30, glassShine: 40 }],
+];
+const GLASS_TINTS = [
+  ['', 'Automatisch', 'var(--panel2)'],
+  ['white', 'Weiß', '#ffffff'],
+  ['black', 'Schwarz', '#000000'],
+  ['accent', 'Akzentfarbe', 'var(--accent)'],
+];
+
+function GlassSlider({ label, k, left, right }) {
+  const v = prefs[k] ?? 50;
+  return (
+    <div class="field lg-slider">
+      <label>
+        {label} <b>{v}%</b>
+      </label>
+      <div class="row lg-range">
+        <span>{left}</span>
+        <input type="range" min="0" max="100" step="5" value={v} onInput={(e) => setPref(k, +e.target.value)} />
+        <span>{right}</span>
+      </div>
+    </div>
+  );
+}
+
+function GlassCustomizer() {
+  const active = GLASS_STYLES.find(([, , , p]) => Object.entries(p).every(([k, v]) => (prefs[k] ?? 50) === v))?.[0];
+  const applyStyle = (p, e) =>
+    withTransition(() => {
+      for (const [k, v] of Object.entries(p)) prefs[k] = v;
+      prefs.glassRefraction = true;
+      setGlass(p.glass);
+    }, e);
+  const customTint = /^#[0-9a-f]{6}$/i.test(prefs.glassTint) ? prefs.glassTint : '';
+  return (
+    <div class="card lg-custom">
+      <b class="lg-title">Glas anpassen</b>
+      <div class="hint">Stell selbst ein, wie stark man durch das Glas schaut – oder nimm einen fertigen Stil.</div>
+      <div class="lg-styles">
+        {GLASS_STYLES.map(([id, name, ic, p]) => (
+          <button class={`lg-style ${active === id ? 'on' : ''}`} onClick={(e) => applyStyle(p, e)}>
+            <span>{ic}</span>
+            {name}
+          </button>
+        ))}
+      </div>
+      <GlassSlider label="Durchsichtigkeit" k="glassClarity" left="Getönt" right="Ganz klar" />
+      <GlassSlider label="Unschärfe" k="glassBlur" left="Scharf" right="Milchig" />
+      {refractionSupported() ? (
+        <div class="field lg-slider">
+          <label>
+            Lichtbrechung <b>{prefs.glassRefraction ? prefs.glassRefractStr : 0}%</b>
+          </label>
+          <div class="row lg-range">
+            <span>Aus</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="5"
+              value={prefs.glassRefraction ? prefs.glassRefractStr : 0}
+              onInput={(e) => {
+                prefs.glassRefraction = +e.target.value > 0;
+                setPref('glassRefractStr', +e.target.value);
+              }}
+            />
+            <span>Stark</span>
+          </div>
+        </div>
+      ) : (
+        <div class="hint" style={{ margin: '4px 0 12px' }}>Dieser Browser kann nur den Weichzeichner. Die echte Lichtbrechung gibt es in der Nook-App, in Chrome und in Edge.</div>
+      )}
+      <GlassSlider label="Glanz" k="glassShine" left="Matt" right="Glänzend" />
+      <div class="field">
+        <label>Glasfarbe</label>
+        <div class="row lg-tints">
+          {GLASS_TINTS.map(([id, name, c]) => (
+            <button class={`lg-tint ${prefs.glassTint === id ? 'on' : ''}`} data-tip={name} style={{ '--c': c }} onClick={() => setPref('glassTint', id)} />
+          ))}
+          <label class={`lg-tint custom ${customTint ? 'on' : ''}`} data-tip="Eigene Farbe" style={{ '--c': customTint || 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)' }}>
+            <input type="color" value={customTint || '#7c5cff'} onInput={(e) => setPref('glassTint', e.target.value)} />
+          </label>
+        </div>
+      </div>
+      {windowGlassSupported() && (
+        <ToggleRow title="Fenster durchsichtig" desc="Dein Desktop scheint durch die ganze App – statt des Hintergrundbilds" on={prefs.windowGlass} onChange={(v) => withTransition(() => setPref('windowGlass', v))} />
+      )}
+    </div>
+  );
+}
+
 function Appearance() {
   const wp = wallpaperId();
   // vorhandenes eigenes Bild zuerst auswählen, ein weiterer Klick tauscht es aus
@@ -509,26 +605,7 @@ function Appearance() {
             </SegBox>
           </div>
         </div>
-        {prefs.glass && (
-          <>
-            <div class="field" style={{ marginTop: 16 }}>
-              <label>Durchsichtigkeit: {prefs.glassClarity}%</label>
-              <div class="row lg-range">
-                <span>Kaum</span>
-                <input type="range" min="0" max="100" step="5" value={prefs.glassClarity} onInput={(e) => setPref('glassClarity', +e.target.value)} />
-                <span>Ganz</span>
-              </div>
-            </div>
-            {windowGlassSupported() && (
-              <ToggleRow title="Fenster durchsichtig" desc="Dein Desktop scheint durch die ganze App – statt des Hintergrundbilds" on={prefs.windowGlass} onChange={(v) => withTransition(() => setPref('windowGlass', v))} />
-            )}
-            {refractionSupported() ? (
-              <ToggleRow title="Lichtbrechung an den Kanten" desc="Echte Verzerrung des Hintergrunds – braucht etwas mehr Grafikleistung" on={prefs.glassRefraction} onChange={(v) => setPref('glassRefraction', v)} />
-            ) : (
-              <div class="hint" style={{ marginTop: 10 }}>Dieser Browser kann nur den Weichzeichner. Die echte Lichtbrechung gibt es in der Nook-App, in Chrome und in Edge.</div>
-            )}
-          </>
-        )}
+        {prefs.glass && <GlassCustomizer />}
       </Section>
       <Section title="Hintergrund">
         <div class="wp-grid">

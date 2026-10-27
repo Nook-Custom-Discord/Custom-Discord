@@ -45,6 +45,10 @@ export function refractionSupported() {
 
 let mode = ''; // aktive Variante ('' = aus)
 let refract = false;
+// eingestellte Faktoren (Regler „Unschärfe“ und „Lichtbrechung“, 1 = Standard) – ändern sie sich, werden die Filter neu gebaut
+let blurK = 1;
+let shiftK = 1;
+let rebuildT = 0;
 let ro = null;
 let mo = null;
 let host = null;
@@ -65,7 +69,18 @@ function svgHost() {
 
 // Verschiebungskarte für ein abgerundetes Rechteck: Rot = x, Grün = y, 128 = keine Verschiebung.
 // Innerhalb der Kante (bezel) zeigt jeder Punkt Hintergrund von weiter innen – am Rand am stärksten.
+const maps = new Map(); // Größe/Radius/Kante -> Bild (bleibt beim Neuaufbau der Filter erhalten)
 function displacementMap(w, h, r, bezel) {
+  const mk = `${w}x${h}r${Math.round(r)}z${bezel}`;
+  let url = maps.get(mk);
+  if (!url) {
+    url = drawMap(w, h, r, bezel);
+    if (maps.size > 80) maps.delete(maps.keys().next().value);
+    maps.set(mk, url);
+  }
+  return url;
+}
+function drawMap(w, h, r, bezel) {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
@@ -116,7 +131,8 @@ function displacementMap(w, h, r, bezel) {
 function filterFor(w, h, r, blur) {
   const look = LOOK[mode] || LOOK.tinted;
   const bezel = Math.min(look.bezel, Math.min(w, h) / 2);
-  const key = `${w}x${h}r${Math.round(r)}b${blur}${mode}`;
+  const shift = Math.round(look.shift * shiftK * 10) / 10;
+  const key = `${w}x${h}r${Math.round(r)}b${blur}s${shift}${mode}`;
   let f = filters.get(key);
   if (!f) {
     const id = 'lg' + ++seq;
@@ -132,7 +148,7 @@ function filterFor(w, h, r, blur) {
     node.innerHTML =
       `<feGaussianBlur in="SourceGraphic" stdDeviation="${blur}" edgeMode="duplicate" result="b"/>` +
       `<feImage href="${displacementMap(w, h, r, bezel)}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none" result="m"/>` +
-      `<feDisplacementMap in="b" in2="m" scale="${look.shift * 2}" xChannelSelector="R" yChannelSelector="G" result="d"/>` +
+      `<feDisplacementMap in="b" in2="m" scale="${shift * 2}" xChannelSelector="R" yChannelSelector="G" result="d"/>` +
       `<feColorMatrix in="d" type="saturate" values="${look.sat}"/>`;
     svgHost().appendChild(node);
     f = { id, node, uses: 0 };
@@ -165,7 +181,7 @@ function apply(el) {
   let r = parseFloat(cs.borderTopLeftRadius) || 0;
   if (cs.borderTopLeftRadius.endsWith('%')) r = (r / 100) * Math.min(w, h);
   const own = parseFloat(cs.getPropertyValue('--lg-blur'));
-  const blur = Number.isFinite(own) ? own : (LOOK[mode] || LOOK.tinted).blur;
+  const blur = Math.round((Number.isFinite(own) ? own : (LOOK[mode] || LOOK.tinted).blur) * blurK * 10) / 10;
   const [key, f] = filterFor(w, h, r, blur);
   if (applied.get(el) === key) return;
   release(applied.get(el));
@@ -276,7 +292,20 @@ export function syncGlass() {
     }
   }
   const want = prefs.glass || '';
-  const wantRefract = !!want && prefs.glassRefraction && refractionSupported();
+  const wantRefract = !!want && prefs.glassRefraction && (prefs.glassRefractStr ?? 50) > 0 && refractionSupported();
+  const bk = (prefs.glassBlur ?? 50) / 50;
+  const sk = (prefs.glassRefractStr ?? 50) / 50;
+  if (bk !== blurK || sk !== shiftK) {
+    blurK = bk;
+    shiftK = sk;
+    // Filter mit den neuen Werten neu aufbauen – kurz verzögert, damit das Ziehen am Regler flüssig bleibt
+    clearTimeout(rebuildT);
+    rebuildT = setTimeout(() => {
+      if (!refract) return;
+      stopRefraction();
+      startRefraction();
+    }, 150);
+  }
   if (want !== mode) {
     if (!mode && want) {
       document.addEventListener('pointermove', onMove, { passive: true });

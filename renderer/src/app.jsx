@@ -362,8 +362,16 @@ function applyTheme() {
   // Liquid Glass: Materialien über das Attribut, Lichtbrechung über glass.js
   if (prefs.glass) root.dataset.glass = prefs.glass;
   else delete root.dataset.glass;
-  // Durchsichtigkeit: 0 % = fast deckend, 50 % = Standard, 100 % = ganz klar (skaliert die Glas-Tönung)
-  root.style.setProperty('--glass-o', String((100 - (prefs.glassClarity ?? 50)) / 50));
+  // Glas anpassen: Regler (0–100, 50 = Standard) werden zu Faktoren für die Glas-Variablen in styles.css
+  const pct = (v) => (v ?? 50) / 50;
+  root.style.setProperty('--glass-o', String(2 - pct(prefs.glassClarity))); // Tönung: 0 = ganz klar
+  root.style.setProperty('--glass-b', String(pct(prefs.glassBlur))); // Unschärfe
+  root.style.setProperty('--glass-s', String(pct(prefs.glassShine))); // Glanz
+  const tint = { white: '#ffffff', black: '#000000', accent: 'var(--accent)' }[prefs.glassTint] || (/^#[0-9a-f]{6}$/i.test(prefs.glassTint) ? prefs.glassTint : '');
+  if (tint) root.style.setProperty('--glass-tint', tint);
+  else root.style.removeProperty('--glass-tint');
+  // sehr klares oder scharfes Glas: Schrift bekommt einen Schatten, damit sie lesbar bleibt
+  root.toggleAttribute('data-glass-thin', !!prefs.glass && ((prefs.glassClarity ?? 50) >= 75 || (prefs.glassBlur ?? 50) <= 20));
   syncGlass();
   document.body.classList.add('platform-' + (window.nook?.platform || 'web'));
   const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
