@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#0b0d12" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Nook" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="icon" href="icons/icon-192.png" />
+    <title>Nook</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <style>
+      html, body { margin: 0; height: 100%; background: #0b0d12; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // Lädt die Oberfläche vom Nook-Server (immer die neueste Version = Live-Updates).
+      // Ohne Server-Verbindung wird die in der App eingebaute Version genommen.
+      (function () {
+        var done = false;
+        function css(href) {
+          var l = document.createElement('link');
+          l.rel = 'stylesheet';
+          l.href = href;
+          document.head.appendChild(l);
+        }
+        function js(src, onerror) {
+          var s = document.createElement('script');
+          s.src = src;
+          if (onerror) s.onerror = onerror;
+          document.body.appendChild(s);
+        }
+        function local() {
+          if (done) return;
+          done = true;
+          window.__NOOK_UI_V = 'local';
+          css('styles.css');
+          js('bundle.js');
+        }
+        var server = null;
+        try {
+          server = localStorage.getItem('nook.server');
+        } catch (e) {}
+        if (location.protocol !== 'file:' || !server) return local();
+        var timer = setTimeout(local, 3500);
+        fetch(server + '/api/ui')
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (info) {
+            if (done || !info || !info.v) return local();
+            done = true;
+            clearTimeout(timer);
+            window.__NOOK_UI_V = info.v;
+            window.__NOOK_REMOTE_UI = server;
+            css(server + '/styles.css?v=' + info.v);
+            js(server + '/bundle.js?v=' + info.v, function () {
+              // Server-Version kaputt/nicht erreichbar -> eingebaute Version
+              done = false;
+              local();
+            });
+          })
+          .catch(local);
+      })();
+    </script>
+  </body>
+</html>
