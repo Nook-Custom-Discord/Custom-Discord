@@ -1,5 +1,5 @@
 // Electron-Hauptprozess
-const { app, BrowserWindow, ipcMain, desktopCapturer, session, shell, Tray, Menu, nativeImage, systemPreferences, Notification, powerMonitor, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer, session, shell, Tray, Menu, nativeImage, systemPreferences, Notification, powerMonitor, globalShortcut, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -54,28 +54,57 @@ function localIPs() {
   return out;
 }
 
-// Durchsichtiges Fenster (Desktop scheint durch): Windows 11 22H2+ (Acryl) und macOS (Vibrancy)
-const transparentSupported = () => process.platform === 'darwin' || (process.platform === 'win32' && Number(os.release().split('.')[2] || 0) >= 22621);
-function applyTransparency(on) {
-  if (!win || !transparentSupported()) return;
+// Fenster-Modus für Liquid Glass:
+//   ''      normal
+//   'blur'  Desktop scheint verschwommen durch (Windows 11 22H2+ mit Acryl, macOS mit Vibrancy)
+//   'clear' Fenster komplett durchsichtig, Apps dahinter gestochen scharf sichtbar. Geht nur beim Erstellen
+//           des Fensters – beim Umschalten wird es neu aufgebaut; die Fensterknöpfe zeichnet dann die Oberfläche.
+const blurSupported = () => process.platform === 'darwin' || (process.platform === 'win32' && Number(os.release().split('.')[2] || 0) >= 22621);
+const clearSupported = () => ['win32', 'darwin', 'linux'].includes(process.platform);
+function windowMode() {
+  const m = config.windowMode ?? (config.transparent ? 'blur' : '');
+  if (m === 'blur') return blurSupported() ? 'blur' : '';
+  return m === 'clear' && clearSupported() ? 'clear' : '';
+}
+function applyBlur(on) {
+  if (!win || !blurSupported()) return;
   try {
     if (process.platform === 'darwin') win.setVibrancy(on ? 'under-window' : null);
     else win.setBackgroundMaterial(on ? 'acrylic' : 'none');
     win.setBackgroundColor(on ? '#00000000' : '#0d0f14');
   } catch {}
 }
+let clearWin = false; // aktuelles Fenster ist komplett durchsichtig
+let restoreBounds = null; // durchsichtige Fenster lassen sich unter Windows nicht nativ maximieren -> selbst machen
+function toggleMaximize() {
+  if (!win) return;
+  if (!clearWin) return win.isMaximized() ? win.unmaximize() : win.maximize();
+  if (restoreBounds) {
+    win.setBounds(restoreBounds);
+    restoreBounds = null;
+  } else {
+    restoreBounds = win.getBounds();
+    win.setBounds(screen.getDisplayMatching(restoreBounds).workArea);
+  }
+}
 
-function createWindow() {
+function createWindow(bounds) {
+  const mode = windowMode();
+  clearWin = mode === 'clear';
+  restoreBounds = null;
   win = new BrowserWindow({
-    width: 1360,
-    height: 860,
+    width: bounds?.width || 1360,
+    height: bounds?.height || 860,
+    x: bounds?.x,
+    y: bounds?.y,
     minWidth: 960,
     minHeight: 600,
-    backgroundColor: '#0d0f14',
+    backgroundColor: clearWin ? '#00000000' : '#0d0f14',
+    transparent: clearWin,
     show: false,
     icon: iconPath,
     titleBarStyle: 'hidden',
-    titleBarOverlay: process.platform === 'darwin' ? false : { color: '#0d0f14', symbolColor: '#c9cdd8', height: 52 },
+    titleBarOverlay: process.platform === 'darwin' || clearWin ? false : { color: '#0d0f14', symbolColor: '#c9cdd8', height: 52 },
     trafficLightPosition: { x: 16, y: 18 },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -84,7 +113,7 @@ function createWindow() {
       spellcheck: true,
     },
   });
-  if (config.transparent) applyTransparency(true);
+  if (mode === 'blur') applyBlur(true);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.once('ready-to-show', () => win.show());
   // Testmodus: NOOK_SCREENSHOT=pfad.png speichert nach dem Laden einen Screenshot und beendet die App
@@ -246,12 +275,43 @@ ipcMain.handle('host-stop', async () => {
   writeConfig(config);
   return { running: false };
 });
-ipcMain.handle('get-config', () => ({ closeToTray: config.closeToTray !== false, autoStart: app.getLoginItemSettings().openAtLogin, version: app.getVersion(), platform: process.platform, transparentSupported: transparentSupported(), transparent: !!config.transparent }));
-ipcMain.on('set-transparent', (e, on) => {
-  if (!!config.transparent === !!on) return;
-  config.transparent = !!on;
+ipcMain.handle('get-config', () => ({
+  closeToTray: config.closeToTray !== false,
+  autoStart: app.getLoginItemSettings().openAtLogin,
+  version: app.getVersion(),
+  platform: process.platform,
+  blurSupported: blurSupported(),
+  clearSupported: clearSupported(),
+  windowMode: windowMode(),
+  // ältere Oberflächen kennen nur „durchsichtig ja/nein“
+  transparentSupported: blurSupported(),
+  transparent: windowMode() === 'blur',
+}));
+function setWindowMode(mode) {
+  const before = windowMode();
+  config.windowMode = mode === 'blur' || mode === 'clear' ? mode : '';
+  delete config.transparent;
   writeConfig(config);
-  applyTransparency(!!on);
+  const after = windowMode();
+  if (!win || after === before) return;
+  if ((after === 'clear') === clearWin) return applyBlur(after === 'blur');
+  // Wechsel von/zu „komplett durchsichtig“: neues Fenster an gleicher Stelle, altes erst danach schließen
+  const old = win;
+  const wasMax = !!restoreBounds || old.isMaximized();
+  const bounds = restoreBounds || old.getNormalBounds();
+  createWindow(bounds);
+  win.once('ready-to-show', () => {
+    if (wasMax) toggleMaximize();
+    old.destroy();
+  });
+}
+ipcMain.on('set-window-mode', (e, mode) => setWindowMode(mode));
+ipcMain.on('set-transparent', (e, on) => setWindowMode(on ? 'blur' : ''));
+ipcMain.on('win-ctl', (e, action) => {
+  if (!win) return;
+  if (action === 'minimize') win.minimize();
+  if (action === 'maximize') toggleMaximize();
+  if (action === 'close') win.close();
 });
 ipcMain.handle('set-config', (e, c) => {
   if (c.closeToTray !== undefined) config.closeToTray = !!c.closeToTray;
@@ -275,7 +335,7 @@ ipcMain.on('open-external', (e, url) => {
   if (/^https?:\/\//.test(url)) shell.openExternal(url);
 });
 ipcMain.on('titlebar', (e, { color, symbolColor }) => {
-  if (process.platform !== 'darwin' && win?.setTitleBarOverlay) {
+  if (process.platform !== 'darwin' && !clearWin && win?.setTitleBarOverlay) {
     try {
       win.setTitleBarOverlay({ color, symbolColor, height: 52 });
     } catch {}

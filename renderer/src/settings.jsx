@@ -10,7 +10,7 @@ import { V, QUALITY } from './voice';
 import { previewSound, PACKS, SOUND_EVENTS } from './sounds';
 import { clearMarkdownCache } from './markdown';
 import { fadeIn, withTransition } from './fx';
-import { setGlass, refractionSupported, windowGlassSupported } from './glass';
+import { setGlass, refractionSupported, windowCaps } from './glass';
 
 export const THEMES = [
   ['ink', 'Tinte', ['#0b0d12', '#151922', '#1e2430']],
@@ -504,6 +504,41 @@ function GlassSlider({ label, k, left, right }) {
   );
 }
 
+// Fenster: normal, Desktop verschwommen dahinter oder komplett durchsichtig (nur Desktop-App)
+function WindowModePicker() {
+  const caps = windowCaps();
+  if (!caps.blur && !caps.clear) return null;
+  const mode = caps[prefs.windowMode] ? prefs.windowMode : '';
+  const opts = [['', '🖥️ Normal'], caps.blur && ['blur', '🌫️ Desktop verschwommen'], caps.clear && ['clear', '🪟 Komplett durchsichtig']].filter(Boolean);
+  return (
+    <div class="field lg-window">
+      <label>Fenster</label>
+      <SegBox>
+        {opts.map(([v, l]) => (
+          <button
+            class={mode === v ? 'on' : ''}
+            onClick={async () => {
+              const reload = (v === 'clear') !== (mode === 'clear');
+              if (reload && V.channelId && !(await confirmDialog('Nook lädt kurz neu', 'Dafür wird das Fenster neu aufgebaut und dein Anruf getrennt. Trotzdem umschalten?', { ok: 'Umschalten', danger: false }))) return;
+              setPref('windowMode', v);
+            }}
+          >
+            {l}
+          </button>
+        ))}
+      </SegBox>
+      <div class="hint" style={{ marginTop: 8 }}>
+        {mode === 'clear'
+          ? 'Du siehst die Apps hinter Nook gestochen scharf – wie Glas bei iOS. Mit „Durchsichtigkeit“ und „Glasfarbe“ stellst du ein, wie viel die Flächen abdecken.'
+          : mode === 'blur'
+            ? 'Dein Desktop scheint weich verschwommen durch die ganze App.'
+            : 'Das Fenster deckt alles dahinter ab.'}
+        {caps.clear && ' Beim Wechsel zu oder von „Komplett durchsichtig“ lädt Nook kurz neu (ein laufender Anruf wird dabei getrennt).'}
+      </div>
+    </div>
+  );
+}
+
 function GlassCustomizer() {
   const active = GLASS_STYLES.find(([, , , p]) => Object.entries(p).every(([k, v]) => (prefs[k] ?? 50) === v))?.[0];
   const applyStyle = (p, e) =>
@@ -563,9 +598,7 @@ function GlassCustomizer() {
           </label>
         </div>
       </div>
-      {windowGlassSupported() && (
-        <ToggleRow title="Fenster durchsichtig" desc="Dein Desktop scheint durch die ganze App – statt des Hintergrundbilds" on={prefs.windowGlass} onChange={(v) => withTransition(() => setPref('windowGlass', v))} />
-      )}
+      <WindowModePicker />
     </div>
   );
 }
@@ -634,7 +667,7 @@ function Appearance() {
         </div>
         <ToggleRow title="Bewegter Hintergrund" desc="Die Farbwolken treiben ganz langsam" on={prefs.wallpaperMotion} onChange={(v) => setPref('wallpaperMotion', v)} />
         {!prefs.glass && <div class="hint">Tipp: Am schönsten wirkt der Hintergrund mit Liquid Glass – ohne ist er nur leicht zu sehen.</div>}
-        {prefs.glass && prefs.windowGlass && windowGlassSupported() && <div class="hint">Gerade scheint dein Desktop durch. Der Hintergrund hier gilt wieder, sobald „Fenster durchsichtig" aus ist.</div>}
+        {prefs.glass && windowCaps()[prefs.windowMode] && <div class="hint">Gerade schaust du durch das Fenster auf deinen Desktop. Der Hintergrund hier gilt wieder, sobald das Fenster auf „Normal“ steht.</div>}
       </Section>
       <Section title="Farbschema">
         <div class="row" style={{ flexWrap: 'wrap' }}>

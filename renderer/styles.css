@@ -725,6 +725,39 @@ input[type='color'] {
   -webkit-app-region: drag;
   align-self: stretch;
 }
+/* eigene Fensterknöpfe (komplett durchsichtiges Fenster, dort gibt es keine vom System) */
+.topbar:has(> .win-ctls) {
+  padding-right: 10px;
+}
+.win-ctls {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  margin-left: 2px;
+  border-radius: 99px;
+  background: var(--mat-float);
+  backdrop-filter: var(--mat-float-fx);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--rim);
+  flex: none;
+}
+.win-ctls button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--text2);
+  transition: background 0.15s, color 0.15s;
+}
+.win-ctls button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.win-ctls button.close:hover {
+  background: var(--danger);
+  color: #fff;
+}
 .logo-btn {
   height: 44px;
   padding: 0 14px 0 6px;
@@ -7453,6 +7486,20 @@ html[data-winglass] body,
 [data-winglass] .wallpaper:not(.thumb)::before,
 [data-winglass] .wallpaper:not(.thumb)::after {
   display: none;
+}
+/* Komplett durchsichtig: kein Hintergrund, man sieht die Apps hinter Nook scharf. Hinter dem Fenster kann
+   die Seite nichts weichzeichnen, also bleiben die großen Flächen nur getönt (Regler „Durchsichtigkeit“). */
+[data-winglass='clear'] .wallpaper:not(.thumb) {
+  display: none;
+}
+[data-winglass='clear'] {
+  --mat-panel-fx: none;
+}
+[data-winglass='clear'] :is(.app, .login) {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
+}
+[data-theme='paper'][data-winglass='clear'] :is(.app, .login) {
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 
 /* Klar: Schrift bekommt einen leichten Schatten, damit sie auf jedem Hintergrund lesbar bleibt */

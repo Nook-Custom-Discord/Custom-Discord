@@ -266,30 +266,43 @@ function onOut(e) {
   if (!e.relatedTarget) unshine();
 }
 
-// Durchsichtiges Fenster (nur Desktop-App unter Windows 11 / macOS): statt des Hintergrunds scheint der Desktop durch.
-// Ob das System es kann, weiß nur der Hauptprozess – bis zur Antwort bleibt alles, wie es ist.
-let winOk = null;
+// Durchsichtiges Fenster (nur Desktop-App): 'blur' = Desktop scheint verschwommen durch (Windows 11 / macOS),
+// 'clear' = Fenster komplett durchsichtig, Apps dahinter scharf sichtbar. Was das System kann, weiß nur der
+// Hauptprozess – bis zur Antwort bleibt alles, wie es ist.
+let winCaps = null; // { blur, clear }
 let winSent = null;
+let winNow = ''; // Modus, mit dem das aktuelle Fenster läuft
 if (window.nook?.setTransparent)
   window.nook
     .getConfig()
     .then((c) => {
-      winOk = !!c.transparentSupported;
-      winSent = !!c.transparent;
+      winCaps = { blur: !!(c.blurSupported ?? c.transparentSupported), clear: !!c.clearSupported && !!window.nook.setWindowMode };
+      winNow = winSent = c.windowMode ?? (c.transparent ? 'blur' : '');
+      // frühere Einstellung „Fenster durchsichtig“ übernehmen
+      if (prefs.windowMode == null && prefs.windowGlass) prefs.windowMode = 'blur';
       update();
     })
     .catch(() => {});
-export const windowGlassSupported = () => !!winOk;
+export const windowCaps = () => winCaps || { blur: false, clear: false };
+// läuft das Fenster komplett durchsichtig? Dann zeichnet die Oberfläche die Fensterknöpfe selbst
+export const windowIsClear = () => winNow === 'clear';
 
 // Wird bei jedem Rendern aufgerufen (applyTheme) und gleicht den Zustand mit den Einstellungen ab
 export function syncGlass() {
-  if (winOk !== null) {
-    const on = winOk && !!prefs.glass && prefs.windowGlass;
-    document.documentElement.toggleAttribute('data-winglass', on);
-    if (on !== winSent) {
-      winSent = on;
-      window.nook.setTransparent(on);
+  if (winCaps) {
+    const m = prefs.windowMode || '';
+    const want = winCaps[m] ? m : '';
+    // Das Fenster bleibt durchsichtig, auch wenn Glas kurz aus ist (Umschalten auf „komplett durchsichtig“ baut
+    // das Fenster neu auf); ohne Glas deckt die Oberfläche einfach alles ab.
+    if (want !== winSent) {
+      winSent = want;
+      if (window.nook.setWindowMode) window.nook.setWindowMode(want);
+      else window.nook.setTransparent(want === 'blur');
+      if ((want === 'clear') === (winNow === 'clear')) winNow = want;
     }
+    const shown = prefs.glass ? winNow : '';
+    if (shown) document.documentElement.dataset.winglass = shown;
+    else delete document.documentElement.dataset.winglass;
   }
   const want = prefs.glass || '';
   const wantRefract = !!want && prefs.glassRefraction && (prefs.glassRefractStr ?? 50) > 0 && refractionSupported();
