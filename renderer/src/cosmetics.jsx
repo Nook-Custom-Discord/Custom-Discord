@@ -1,5 +1,9 @@
 // Profil-Kosmetik: Avatar-Dekorationen, Profil-Effekte, Namensschilder, Namens-Stile.
-// Alles eigene Designs (CSS + Emoji), komplett gratis.
+// Alles eigene Designs (CSS + Emoji + generierte SVG-Kunst), komplett gratis.
+import { WEBS, webArt } from './membrane';
+
+// Netz-Varianten (Blutnetz, Frostnetz, …) gibt es jeweils als Deko, Effekt, Namensschild und Rahmen
+const WEB_IDS = Object.keys(WEBS);
 
 // ---------- Avatar-Dekorationen ----------
 // ring: CSS-Ring um den Avatar · orbit: kreisende Emojis · acc: feste Accessoires (x/y in % der Avatargröße)
@@ -72,6 +76,7 @@ export const DECORATIONS = [
   { id: 'snowglobe', name: 'Schneekugel', cat: 'Wetter', ring: 'frost', fx: 'snowglobe', neu: true },
   { id: 'petals', name: 'Blütensturm', cat: 'Wetter', ring: 'sakura', fx: 'petals', neu: true },
   { id: 'lovebubble', name: 'Liebesblase', cat: 'Wetter', ring: 'heartbeat', fx: 'hearts', neu: true },
+  ...WEB_IDS.map((v) => ({ id: 'web-' + v, name: WEBS[v].name, cat: 'Netze', web: v, neu: true })),
 ];
 export const DECO_BY_ID = Object.fromEntries(DECORATIONS.map((d) => [d.id, d]));
 
@@ -84,6 +89,12 @@ export function Deco({ id, size }) {
     <div class={`deco ${size >= 64 ? 'deco-in' : ''} ${small ? 'deco-sm' : ''}`} style={{ '--sz': size + 'px' }}>
       {d.ring && <div class={`dring dring-${d.ring}`} />}
       {d.fx && <DecoFx fx={d.fx} small={small} />}
+      {d.web && (
+        // nur große Ansichten bekommen die wabernde Membran, Listen das ruhige Bild
+        <div class="dweb" style={{ '--wg': WEBS[d.web].glow }}>
+          <img src={webArt(d.web, 'ring', size >= 64)} alt="" draggable={false} />
+        </div>
+      )}
       {d.shape && !small && <div class={`dshape dshape-${d.shape}`} />}
       {!small &&
         d.acc?.map((a) => (
@@ -270,6 +281,7 @@ export const FRAMES = [
   { id: 'holo', name: 'Holo' },
   { id: 'pulse', name: 'Herzschlag' },
   { id: 'cyber', name: 'Cyber' },
+  ...WEB_IDS.map((v) => ({ id: 'web-' + v, name: WEBS[v].name })),
 ];
 
 // Der Rand selbst; das passende Leuchten außen setzt die Karte über die Klasse fr-<id>
@@ -305,6 +317,7 @@ export const EFFECTS = [
   { id: 'skulls', name: 'Totenköpfe', items: ['💀'], mode: 'drift', n: 8, overlay: 'night' },
   { id: 'rainbow', name: 'Regenbogen', items: ['🌈', '✨'], mode: 'float', n: 6, overlay: 'rainbow' },
   { id: 'matrix', name: 'Matrix', items: ['code'], mode: 'rain', n: 18, overlay: 'matrix' },
+  ...WEB_IDS.map((v) => ({ id: 'web-' + v, name: WEBS[v].name, web: v })),
 ];
 const EFFECT_BY_ID = Object.fromEntries(EFFECTS.map((e) => [e.id, e]));
 
@@ -316,6 +329,17 @@ function rnd(i, k) {
 export function EffectLayer({ id }) {
   const fx = EFFECT_BY_ID[id];
   if (!fx || !id) return null;
+  if (fx.web) {
+    const p = WEBS[fx.web];
+    return (
+      <div class="fxl fx-web" style={{ '--wg': p.glow, '--wc': p.cell[0] }}>
+        <div class="fx-web-art" style={{ backgroundImage: `url("${webArt(fx.web, 'card')}")` }} />
+        {Array.from({ length: 6 }, (_, i) => (
+          <span class="web-drip" style={{ left: 8 + rnd(i, 1) * 84 + '%', top: rnd(i, 2) * 30 + '%', animationDelay: -rnd(i, 3) * 6 + 's', animationDuration: 4 + rnd(i, 4) * 3 + 's' }} />
+        ))}
+      </div>
+    );
+  }
   return (
     <div class={`fxl ${fx.overlay ? 'fxo-' + fx.overlay : ''}`}>
       {Array.from({ length: fx.n }, (_, i) => {
@@ -366,7 +390,31 @@ export const NAMEPLATES = [
   { id: 'midnight', name: 'Mitternacht' },
   { id: 'rainbow', name: 'Regenbogen' },
   { id: 'toxic', name: 'Toxisch' },
+  ...WEB_IDS.map((v) => ({ id: 'web-' + v, name: WEBS[v].name })),
 ];
+
+// ---------- Pakete: passende Deko + Effekt + Namensschild + Rahmen auf einen Klick ----------
+export const BUNDLES = WEB_IDS.map((v) => ({
+  id: v,
+  name: WEBS[v].name + '-Paket',
+  web: v,
+  items: { decoration: 'web-' + v, effect: 'web-' + v, nameplate: 'web-' + v, frame: 'web-' + v },
+}));
+
+// Namensschilder und Rahmen der Netze brauchen generierte Bilder bzw. Farben aus WEBS -> einmal als CSS einhängen
+(function injectWebStyles() {
+  if (typeof document === 'undefined') return;
+  const css = WEB_IDS.map((v) => {
+    const p = WEBS[v];
+    return `.np-web-${v}::before{background-image:url("${webArt(v, 'plate', false)}");background-size:cover;background-position:center;animation:none;opacity:.85}
+.fr-web-${v}{--f1:${p.dark};--f2:${p.base};--f3:${p.light};--fg:${p.glow}}
+.pframe-web-${v}{background:url("${webArt(v, 'plate', false)}") center/260px auto,${p.dark};padding:6px;animation:none}`;
+  }).join('\n');
+  const el = document.createElement('style');
+  el.id = 'nook-web-styles';
+  el.textContent = css;
+  document.head.appendChild(el);
+})();
 
 // ---------- Namens-Stile ----------
 export const NAME_FONTS = [

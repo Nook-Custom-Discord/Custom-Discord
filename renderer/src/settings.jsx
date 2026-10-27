@@ -4,7 +4,8 @@ import { act, rpc, pickAndUpload, pickFile, upload, fileUrl, logout, displayName
 import { Avatar, Switch, ToggleRow, Seg, Video, Spinner } from './ui';
 import { Icon } from './icons';
 import { ProfileCard } from './profile';
-import { DECORATIONS, EFFECTS, NAMEPLATES, NAME_FONTS, NAME_EFFECTS, FRAMES, Frame, EffectLayer } from './cosmetics';
+import { DECORATIONS, EFFECTS, NAMEPLATES, NAME_FONTS, NAME_EFFECTS, FRAMES, BUNDLES, Frame, EffectLayer } from './cosmetics';
+import { WEBS } from './membrane';
 import { NameText } from './ui';
 import { V, QUALITY } from './voice';
 import { previewSound, PACKS, SOUND_EVENTS } from './sounds';
@@ -141,6 +142,7 @@ const profileState = (me) => ({
 
 const PROFILE_TABS = [
   ['general', 'Allgemein'],
+  ['bundles', '✨ Pakete'],
   ['deco', 'Avatar-Deko'],
   ['fx', 'Effekte & Rahmen'],
   ['name', 'Name & Schild'],
@@ -238,6 +240,7 @@ function Profile() {
               </div>
             </>
           )}
+          {tab === 'bundles' && <BundlePicker p={p} onApply={(items) => setP({ ...p, ...items })} avatar={fileUrl(p.avatar)} name={p.displayName} />}
           {tab === 'deco' && <DecoPicker value={p.decoration} onPick={(v) => set('decoration', v)} avatar={fileUrl(p.avatar)} name={p.displayName} />}
           {tab === 'fx' && (
             <>
@@ -328,6 +331,52 @@ function Profile() {
         </div>
       )}
     </>
+  );
+}
+
+// Pakete: Deko, Effekt, Namensschild und Rahmen im selben Stil auf einen Klick
+function BundlePicker({ p, onApply, avatar, name }) {
+  return (
+    <div class="field">
+      <label>Pakete · alles passend auf einen Klick</label>
+      <div class="bundles">
+        {BUNDLES.map((b) => {
+          const on = Object.entries(b.items).every(([k, v]) => p[k] === v);
+          return (
+            <div class={`bundle ${on ? 'on' : ''}`} style={{ '--wg': WEBS[b.web].glow }}>
+              <div class="bundle-stage">
+                <EffectLayer id={b.items.effect} />
+                <Avatar uid={S.me.id} size={76} src={avatar} name={name} decoration={b.items.decoration} />
+              </div>
+              <div class="bundle-body">
+                <b>{b.name}</b>
+                <div class="muted" style={{ fontSize: 12.5 }}>Paket enthält 4 Gegenstände</div>
+                <div class="bundle-items">
+                  <span class="bundle-item" data-tip="Avatar-Dekoration">
+                    <Avatar uid={S.me.id} size={26} src={avatar} name={name} decoration={b.items.decoration} />
+                  </span>
+                  <span class="bundle-item" data-tip="Profil-Effekt">
+                    <EffectLayer id={b.items.effect} />
+                  </span>
+                  <span class="bundle-item" data-tip="Namensschild">
+                    <div class={`np-preview nameplate np-${b.items.nameplate}`} />
+                  </span>
+                  <span class="bundle-item" data-tip="Profilrahmen">
+                    <div class={`frame-prev framed fr-${b.items.frame}`}>
+                      <Frame id={b.items.frame} />
+                    </div>
+                  </span>
+                </div>
+                <button class="btn sm" onClick={() => onApply(on ? { decoration: '', effect: '', nameplate: '', frame: '' } : b.items)}>
+                  {on ? '✓ Ausgerüstet · ablegen' : 'Ausrüsten'}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div class="hint" style={{ marginTop: 10 }}>Die Teile lassen sich danach auch einzeln in den anderen Reitern tauschen. Vergiss nicht zu speichern.</div>
+    </div>
   );
 }
 

@@ -127,6 +127,7 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 
 **Profil & Anpassung (alles gratis)**
 - Animierte Avatare & Banner (GIF), Profil-Farbthemen, über 60 Avatar-Dekorationen (davon 17 mehrschichtig animiert wie Portal, Schwarzes Loch, Engelsflügel, Cyber-HUD), animierte Profilrahmen, Profil-Effekte, Namens-Stile mit Schrift & Farbverlauf
+- Pakete im Netz-Stil (Blutnetz, Frostnetz, Giftnetz, Schattennetz, Goldnetz): organische, glänzende Netz-Deko, Profil-Effekt mit Tropfen, Namensschild und Rahmen – alles auf einen Klick ausrüstbar, komplett generiert (keine Bilddateien)
 - Pro-Server-Profil (Nickname, Avatar, Banner, Bio), Pronomen, Bio mit Markdown
 - Status (Online/Abwesend/Bitte nicht stören/Unsichtbar), eigener Status mit Emoji & Ablaufzeit, Aktivität („Spielt …")
 - App-Themes (Tinte, Mitternacht, Dämmerung, Wald, Papier) mit kreisförmigem Überblenden, freie Akzentfarbe, Bubble- oder Kompakt-Layout, Schriftgröße
