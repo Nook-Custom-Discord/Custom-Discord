@@ -63,6 +63,22 @@ export function Name({ uid, serverId, color, style: extra }) {
   return <NameText text={displayName(uid, serverId)} ns={S.users[uid]?.nameStyle} color={color} style={extra} />;
 }
 
+// Gruppenbild: eigenes Bild oder eine Collage aus bis zu drei Mitgliedern auf der Gruppenfarbe
+export function GroupIcon({ ch, size = 34 }) {
+  if (ch.icon) return <Avatar src={fileUrl(ch.icon)} size={size} name={ch.name || '?'} deco={false} />;
+  const others = ch.recipients.filter((r) => r !== S.me.id).slice(0, 3);
+  const sub = Math.round(size * [0.64, 0.64, 0.58, 0.5][others.length]);
+  return (
+    <div class={`gicon n${others.length}`} style={{ width: size, height: size, '--gc': ch.color || colorFor(ch.id) }}>
+      {others.length ? others.map((id) => <Avatar uid={id} size={sub} deco={false} />) : <Icon name="users" size={size * 0.5} />}
+    </div>
+  );
+}
+
+export function onlineCount(ids) {
+  return ids.filter((id) => S.users[id] && S.users[id].status !== 'offline').length;
+}
+
 export function ServerIcon({ server, size = 30 }) {
   if (server.icon) return <img class="sicon" src={fileUrl(server.icon)} style={{ width: size, height: size }} draggable={false} />;
   const initials = server.name.split(/\s+/).map((w) => w[0]).join('').slice(0, 3);

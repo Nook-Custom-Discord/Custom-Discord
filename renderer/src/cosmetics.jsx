@@ -54,6 +54,24 @@ export const DECORATIONS = [
   { id: 'newyear', name: 'Silvester', cat: 'Feiertage', orbit: { e: ['🎆', '🎇'], n: 4, speed: 12, twinkle: true }, ring: 'gold' },
   { id: 'love', name: 'Verliebt', cat: 'Feiertage', ring: 'heartbeat', acc: [{ e: '💘', x: 72, y: -10, s: 32, a: 'bob' }], orbit: { e: ['❤️'], n: 4, speed: 10 } },
   { id: 'easter', name: 'Ostern', cat: 'Feiertage', acc: [{ e: '🐣', x: 72, y: 70, s: 30 }, { e: '🥚', x: -10, y: 66, s: 26 }, { e: '🌷', x: 76, y: -6, s: 24 }] },
+  // Animierte Premium-Dekorationen: fx = eigene, mehrschichtige Animation (siehe FX_LAYERS)
+  { id: 'portal', name: 'Dimensionsportal', cat: 'Episch', fx: 'portal', neu: true },
+  { id: 'blackhole', name: 'Schwarzes Loch', cat: 'Episch', fx: 'blackhole', neu: true },
+  { id: 'comet', name: 'Kometen', cat: 'Episch', fx: 'comet', neu: true },
+  { id: 'magic', name: 'Zauberkreis', cat: 'Episch', fx: 'magic', neu: true },
+  { id: 'solar', name: 'Sonnensturm', cat: 'Episch', fx: 'solar', neu: true },
+  { id: 'stardust', name: 'Sternenstaub', cat: 'Episch', fx: 'stardust', neu: true },
+  { id: 'wings', name: 'Engelsflügel', cat: 'Episch', fx: 'wings', neu: true },
+  { id: 'phoenix', name: 'Phönix', cat: 'Episch', ring: 'flame', fx: 'embers', neu: true },
+  { id: 'cyber', name: 'Cyber-HUD', cat: 'Sci-Fi', fx: 'cyber', neu: true },
+  { id: 'hologram', name: 'Hologramm', cat: 'Sci-Fi', fx: 'hologram', neu: true },
+  { id: 'glitch', name: 'Glitch', cat: 'Sci-Fi', fx: 'glitch', neu: true },
+  { id: 'matrix', name: 'Matrix', cat: 'Sci-Fi', fx: 'matrix', neu: true },
+  { id: 'sonar', name: 'Schallwelle', cat: 'Sci-Fi', fx: 'sonar', neu: true },
+  { id: 'storm', name: 'Gewittersturm', cat: 'Wetter', fx: 'storm', neu: true },
+  { id: 'snowglobe', name: 'Schneekugel', cat: 'Wetter', ring: 'frost', fx: 'snowglobe', neu: true },
+  { id: 'petals', name: 'Blütensturm', cat: 'Wetter', ring: 'sakura', fx: 'petals', neu: true },
+  { id: 'lovebubble', name: 'Liebesblase', cat: 'Wetter', ring: 'heartbeat', fx: 'hearts', neu: true },
 ];
 export const DECO_BY_ID = Object.fromEntries(DECORATIONS.map((d) => [d.id, d]));
 
@@ -61,9 +79,11 @@ export function Deco({ id, size }) {
   const d = DECO_BY_ID[id];
   if (!d || !id) return null;
   const small = size < 30;
+  // ab Profilgröße spielt die Dekoration beim Erscheinen eine kurze Intro-Animation ab
   return (
-    <div class="deco" style={{ '--sz': size + 'px' }}>
+    <div class={`deco ${size >= 64 ? 'deco-in' : ''} ${small ? 'deco-sm' : ''}`} style={{ '--sz': size + 'px' }}>
       {d.ring && <div class={`dring dring-${d.ring}`} />}
+      {d.fx && <DecoFx fx={d.fx} small={small} />}
       {d.shape && !small && <div class={`dshape dshape-${d.shape}`} />}
       {!small &&
         d.acc?.map((a) => (
@@ -85,6 +105,177 @@ export function Deco({ id, size }) {
       )}
     </div>
   );
+}
+
+// Partikel für Dekorationen (deterministisch, damit nichts beim Neu-Rendern springt)
+function decoParticles(n, cls, place, content) {
+  return Array.from({ length: n }, (_, i) => {
+    const style = { ...place(i), animationDelay: -rnd(i, 3) * 4 + 's', animationDuration: 2.2 + rnd(i, 4) * 2.4 + 's', '--sx': (rnd(i, 6) - 0.5) * 0.5, '--rot': rnd(i, 9) * 360 + 'deg' };
+    return (
+      <span class={cls} style={style}>
+        {content ? content(i) : null}
+      </span>
+    );
+  });
+}
+const WING = 'M58 30 C40 2 12 0 2 8 C14 12 20 16 22 20 C10 20 4 26 2 30 C14 30 20 32 24 36 C14 38 8 44 6 50 C18 46 26 48 30 52 C24 56 22 62 22 70 C34 60 50 52 58 40 Z';
+const around = (i) => ({ left: 10 + rnd(i, 1) * 80 + '%', top: 50 + rnd(i, 2) * 40 + '%' });
+const above = (i) => ({ left: rnd(i, 1) * 100 + '%' });
+
+// Mehrschichtige Animationen der Premium-Dekorationen. Kleine Avatare (Listen) bekommen nur die Ring-Ebene.
+const FX_LAYERS = {
+  portal: () => (
+    <>
+      <div class="dfx dfx-portal-a" />
+      <div class="dfx dfx-portal-b" />
+      <div class="dfx dfx-portal-glow" />
+    </>
+  ),
+  blackhole: (small) => (
+    <>
+      <div class="dfx dfx-bh-halo" />
+      {!small && (
+        <div class="dfx dfx-bh-disk">
+          <i />
+        </div>
+      )}
+    </>
+  ),
+  comet: () => (
+    <>
+      <div class="dfx dfx-comet" />
+      <div class="dfx dfx-comet b" />
+    </>
+  ),
+  magic: () => (
+    <svg class="dfx dfx-magic" viewBox="0 0 100 100">
+      <g class="m-outer">
+        <circle cx="50" cy="50" r="47" />
+        <circle cx="50" cy="50" r="43" stroke-dasharray="2 4" />
+        {Array.from({ length: 6 }, (_, i) => {
+          const a = (i / 6) * Math.PI * 2;
+          return <circle class="m-dot" cx={50 + Math.sin(a) * 47} cy={50 - Math.cos(a) * 47} r="2.6" />;
+        })}
+      </g>
+      <circle class="m-runes" cx="50" cy="50" r="43.7" pathLength="100" stroke-dasharray="0.6 1.4 2 1.4 0.6 3" />
+    </svg>
+  ),
+  solar: () => (
+    <>
+      <div class="dfx dfx-solar-rays" />
+      <div class="dfx dfx-solar-rays b" />
+      <div class="dring dring-gold" />
+    </>
+  ),
+  stardust: (small) => (
+    <>
+      <div class="dring dring-gold" />
+      {!small && (
+        <div class="dfx dfx-stardust">
+          {Array.from({ length: 8 }, (_, i) => (
+            <span style={{ '--ang': i * 45 + 'deg', animationDelay: i * 0.25 + 's' }} />
+          ))}
+        </div>
+      )}
+    </>
+  ),
+  wings: (small) =>
+    small ? (
+      <div class="dring dring-angel" />
+    ) : (
+      <>
+        <div class="dring dring-angel" />
+        <svg class="dfx dfx-wing l" viewBox="0 0 60 80">
+          <path d={WING} />
+        </svg>
+        <svg class="dfx dfx-wing r" viewBox="0 0 60 80">
+          <path d={WING} transform="translate(60 0) scale(-1 1)" />
+        </svg>
+        <div class="dshape dshape-halo" />
+      </>
+    ),
+  embers: (small) => !small && <div class="dfx dfx-clip-out">{decoParticles(16, 'dp dp-ember', around)}</div>,
+  cyber: () => (
+    <svg class="dfx dfx-cyber" viewBox="0 0 100 100">
+      <circle class="c1" cx="50" cy="50" r="47" pathLength="100" stroke-dasharray="18 4 6 4 30 4 2 4 8 20" />
+      <circle class="c2" cx="50" cy="50" r="42.5" pathLength="100" stroke-dasharray="8 3 8 3 8 20 1 2 1 2 1 2 1 40" />
+      <circle class="c3" cx="50" cy="50" r="38.5" pathLength="100" stroke-dasharray="40 10 20 30" />
+    </svg>
+  ),
+  hologram: (small) => (
+    <>
+      <div class="dfx dfx-holo-ring" />
+      {!small && <div class="dfx dfx-holo-scan" />}
+    </>
+  ),
+  glitch: () => (
+    <>
+      <div class="dfx dfx-glitch r" />
+      <div class="dfx dfx-glitch c" />
+      <div class="dfx dfx-glitch w" />
+    </>
+  ),
+  matrix: (small) => (
+    <>
+      <div class="dfx dfx-matrix-ring" />
+      {!small && <div class="dfx dfx-clip-in">{decoParticles(10, 'dp dp-code', above, (i) => (rnd(i, 8) > 0.5 ? '1' : '0'))}</div>}
+    </>
+  ),
+  sonar: () => (
+    <>
+      <div class="dfx dfx-sonar" />
+      <div class="dfx dfx-sonar" style={{ animationDelay: '-.8s' }} />
+      <div class="dfx dfx-sonar" style={{ animationDelay: '-1.6s' }} />
+    </>
+  ),
+  storm: (small) => (
+    <>
+      <div class="dfx dfx-storm-ring" />
+      {!small && (
+        <svg class="dfx dfx-bolts" viewBox="0 0 100 100">
+          <polyline class="b1" points="16,-2 4,20 14,20 0,42" />
+          <polyline class="b2" points="88,56 101,76 91,76 103,100" />
+          <polyline class="b3" points="72,-10 61,6 69,6 58,22" />
+        </svg>
+      )}
+    </>
+  ),
+  snowglobe: (small) =>
+    !small && (
+      <div class="dfx dfx-clip-in dfx-globe">
+        {decoParticles(14, 'dp dp-snow', above)}
+      </div>
+    ),
+  petals: (small) => !small && <div class="dfx dfx-clip-out">{decoParticles(9, 'dp dp-petal', above)}</div>,
+  hearts: (small) => !small && <div class="dfx dfx-clip-out">{decoParticles(9, 'dp dp-heart', around, () => '❤')}</div>,
+};
+
+function DecoFx({ fx, small }) {
+  return FX_LAYERS[fx]?.(small) || null;
+}
+
+// ---------- Profilrahmen (animierter Rand um die Profilkarte) ----------
+export const FRAMES = [
+  { id: '', name: 'Kein Rahmen' },
+  { id: 'accent', name: 'Akzent' },
+  { id: 'rainbow', name: 'Regenbogen' },
+  { id: 'gold', name: 'Gold' },
+  { id: 'neon', name: 'Neon' },
+  { id: 'fire', name: 'Feuer' },
+  { id: 'ice', name: 'Eis' },
+  { id: 'galaxy', name: 'Galaxie' },
+  { id: 'toxic', name: 'Toxisch' },
+  { id: 'sakura', name: 'Sakura' },
+  { id: 'void', name: 'Leere' },
+  { id: 'holo', name: 'Holo' },
+  { id: 'pulse', name: 'Herzschlag' },
+  { id: 'cyber', name: 'Cyber' },
+];
+
+// Der Rand selbst; das passende Leuchten außen setzt die Karte über die Klasse fr-<id>
+export function Frame({ id }) {
+  if (!id) return null;
+  return <div class={`pframe pframe-${id}`} />;
 }
 
 // ---------- Profil-Effekte (Partikel) ----------

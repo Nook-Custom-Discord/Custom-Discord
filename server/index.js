@@ -45,6 +45,7 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
       effect: u.effect || '',
       nameStyle: u.nameStyle || null,
       nameplate: u.nameplate || '',
+      frame: u.frame || '',
       createdAt: u.createdAt,
       status: effectiveStatus(u.id),
       customStatus: u.customStatus || null,
@@ -443,6 +444,7 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
       if (a.effect !== undefined) u.effect = cleanStr(a.effect, 30);
       if (a.nameStyle !== undefined) u.nameStyle = a.nameStyle ? { font: cleanStr(a.nameStyle.font, 30), effect: cleanStr(a.nameStyle.effect, 30), colors: (a.nameStyle.colors || []).slice(0, 2).map((c) => cleanStr(c, 20)) } : null;
       if (a.nameplate !== undefined) u.nameplate = cleanStr(a.nameplate, 30);
+      if (a.frame !== undefined) u.frame = cleanStr(a.frame, 30);
       if (a.username !== undefined) {
         const un = String(a.username).toLowerCase().trim();
         need(/^[a-z0-9_.]{2,32}$/.test(un), 'Benutzername: 2–32 Zeichen, nur a–z, 0–9, _ und .');
@@ -562,12 +564,12 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
       }
       return ch;
     },
-    createGroup(uid, { userIds = [], name = '' }) {
+    createGroup(uid, { userIds = [], name = '', color = '' }) {
       const ids = [...new Set([uid, ...userIds])].filter((id) => db.users[id]);
       need(ids.length >= 2, 'Wähle mindestens eine Person');
       need(ids.length <= 25, 'Maximal 25 Personen');
       for (const id of ids) if (id !== uid) need(rel(uid, id) === 'friend', 'Du kannst nur Freunde hinzufügen');
-      const ch = { id: newId(), type: 'group', recipients: ids, ownerId: uid, name: cleanStr(name, 60), icon: '', createdAt: Date.now(), lastMessageId: null };
+      const ch = { id: newId(), type: 'group', recipients: ids, ownerId: uid, name: cleanStr(name, 60), icon: '', topic: '', color: /^#[0-9a-f]{6}$/i.test(color) ? color : '', createdAt: Date.now(), lastMessageId: null };
       db.channels[ch.id] = ch;
       save();
       for (const id of ids) emitTo(ids, 'user', publicUser(db.users[id]));
@@ -603,17 +605,25 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
       }
       return true;
     },
-    updateGroup(uid, { channelId, name, icon, ownerId }) {
+    updateGroup(uid, { channelId, name, icon, ownerId, topic, color }) {
       const ch = db.channels[channelId];
       need(ch?.type === 'group' && ch.recipients.includes(uid));
+      const newOwner = ownerId !== undefined && ownerId !== ch.ownerId;
       if (ownerId !== undefined) {
         need(ch.ownerId === uid && ch.recipients.includes(ownerId), 'Nur der Besitzer kann das');
         ch.ownerId = ownerId;
       }
+      const renamed = name !== undefined && cleanStr(name, 60) !== (ch.name || '');
+      const newIcon = icon !== undefined && cleanUrl(icon) !== (ch.icon || '');
       if (name !== undefined) ch.name = cleanStr(name, 60);
       if (icon !== undefined) ch.icon = cleanUrl(icon);
+      if (topic !== undefined) ch.topic = cleanStr(topic, 200);
+      if (color !== undefined) ch.color = /^#[0-9a-f]{6}$/i.test(color) ? color : '';
       save();
       emitTo(ch.recipients, 'channelUpdate', ch);
+      if (renamed) sysMessage(ch, uid, 'groupRename', { name: ch.name });
+      if (newIcon) sysMessage(ch, uid, 'groupIcon');
+      if (newOwner) sysMessage(ch, uid, 'groupOwner', { targetId: ownerId });
       return true;
     },
     closeDM(uid, { channelId }) {

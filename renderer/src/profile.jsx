@@ -2,7 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { S, update, openModal, closeModal, openPopout, toast, confirmDialog } from './store';
 import { act, rpc, openDM, fileUrl, displayName, roleColor, copy, navigate, logout } from './api';
 import { Avatar, Name, NameText, STATUS_LABEL, StatusDot, Modal, ServerIcon, colorFor } from './ui';
-import { EffectLayer } from './cosmetics';
+import { EffectLayer, Frame } from './cosmetics';
 import { Icon } from './icons';
 import { Md } from './message';
 import { V } from './voice';
@@ -20,7 +20,7 @@ export function ProfileCard({ uid, serverId, preview, actions = true, onClose })
   const avatar = fileUrl((preview?.avatar ?? member?.avatar) || u.avatar);
   const bio = member?.bio || u.bio;
   const themed = u.theme && u.theme[0];
-  const style = themed ? { '--t1': u.theme[0], '--t2': u.theme[1] || u.theme[0], '--pc-bg': u.theme[0] } : {};
+  const style = { '--uacc': u.accent || colorFor(uid), ...(themed ? { '--t1': u.theme[0], '--t2': u.theme[1] || u.theme[0], '--pc-bg': u.theme[0] } : {}) };
   const roles = member ? S.servers[serverId].roles.filter((r) => member.roles.includes(r.id)) : [];
   const me = uid === S.me.id;
   const rel = S.rel[uid];
@@ -29,11 +29,12 @@ export function ProfileCard({ uid, serverId, preview, actions = true, onClose })
   const [note, setNote] = useState(S.me.notes?.[uid] || '');
   const nameStyle = u.nameStyle;
   return (
-    <div class={`pcard ${themed ? 'themed' : ''}`} style={style} onClick={(e) => e.stopPropagation()}>
+    <div class={`pcard ${themed ? 'themed' : ''} ${u.frame ? 'framed fr-' + u.frame : ''}`} style={style} onClick={(e) => e.stopPropagation()}>
       <EffectLayer id={u.effect} key={u.effect} />
+      <Frame id={u.frame} />
       <div class="pbanner" style={{ '--pbanner': banner ? `url(${banner})` : u.accent || colorFor(uid) }} />
       <div class="pav">
-        <Avatar uid={uid} size={92} status={!preview} src={avatar} name={u.displayName} decoration={preview ? u.decoration || '' : undefined} />
+        <Avatar uid={uid} size={92} status={!preview} src={avatar} name={u.displayName} decoration={preview ? u.decoration || '' : undefined} key={preview ? u.decoration : uid} />
       </div>
       {(u.customStatus?.text || u.customStatus?.emoji) && (
         <div class="cstat ellipsis">

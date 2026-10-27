@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { S, update, prefs, setPref, openModal, openMenu, openPopout, confirmDialog, promptDialog, toast } from './store';
 import { act, rpc, navigate, serverUnread, sortedChannels, isUnread, displayName, channelTitle, voiceMembers, can, P, dmList, roleColor, hoistRole, markRead, copy, openDM, fileUrl, serverIdOf, notifyLevel, updateBadge } from './api';
-import { Avatar, ServerIcon, ChannelIcon, Name, STATUS_LABEL, colorFor } from './ui';
+import { Avatar, ServerIcon, ChannelIcon, Name, STATUS_LABEL, GroupIcon, onlineCount } from './ui';
 import { Icon, LogoMark } from './icons';
 import { V } from './voice';
 import { VoiceCard, voiceUserMenu } from './voiceui';
@@ -160,7 +160,7 @@ function DmItem({ ch }) {
   const inCall = voiceMembers(ch.id).length > 0;
   const other = ch.type === 'dm' ? ch.recipients.find((r) => r !== S.me.id) : null;
   const u = other && S.users[other];
-  const sub = ch.type === 'group' ? `${ch.recipients.length} Mitglieder` : u?.customStatus?.text || (S.activities[other] ? `${S.activities[other].type || 'Spielt'} ${S.activities[other].name}` : '');
+  const sub = ch.type === 'group' ? ch.topic || `${ch.recipients.length} Mitglieder · ${onlineCount(ch.recipients)} online` : u?.customStatus?.text || (S.activities[other] ? `${S.activities[other].type || 'Spielt'} ${S.activities[other].name}` : '');
   const menu = (e) =>
     openMenu(e, [
       { label: 'Als gelesen markieren', icon: 'check', onClick: () => markRead(ch.id) },
@@ -178,14 +178,8 @@ function DmItem({ ch }) {
     <div class={`dm-item ${active ? 'active' : ''} ${unread ? 'unread' : ''} ${u?.nameplate ? 'nameplate np-' + u.nameplate : ''}`} onClick={() => navigate('@me', ch.id)} onContextMenu={menu}>
       {ch.type === 'dm' ? (
         <Avatar uid={other} size={34} status />
-      ) : ch.icon ? (
-        <Avatar src={fileUrl(ch.icon)} size={34} name={channelTitle(ch)} />
       ) : (
-        <div class="avatar" style={{ width: 34, height: 34 }}>
-          <div class="img" style={{ background: colorFor(ch.id) }}>
-            <Icon name="users" size={18} />
-          </div>
-        </div>
+        <GroupIcon ch={ch} size={34} />
       )}
       <div class="grow" style={{ minWidth: 0 }}>
         <div class="n ellipsis">{channelTitle(ch)}</div>

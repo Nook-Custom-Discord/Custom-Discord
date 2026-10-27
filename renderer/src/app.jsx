@@ -12,7 +12,7 @@ import { SettingsView } from './settings';
 import { ServerSettingsView } from './serversettings';
 import { ProfileCard, StatusPopout } from './profile';
 import { EmojiPicker } from './picker';
-import { ContextMenu, Toasts, TooltipLayer, Positioned, Avatar, ChannelIcon, Spinner, fmtDateTime } from './ui';
+import { ContextMenu, Toasts, TooltipLayer, Positioned, Avatar, ChannelIcon, GroupIcon, Spinner, fmtDateTime } from './ui';
 import { Icon, LogoMark } from './icons';
 import { Md } from './message';
 
@@ -148,11 +148,11 @@ function ChannelHeader({ ch }) {
           <Icon name="chevronRight" style={{ transform: 'rotate(180deg)' }} />
         </button>
         <div class="title">
-        {ch.type === 'dm' ? <Avatar uid={other} size={28} status /> : ch.type === 'group' ? <Icon name="users" size={20} /> : <ChannelIcon ch={ch} size={20} />}
+        {ch.type === 'dm' ? <Avatar uid={other} size={28} status /> : ch.type === 'group' ? <GroupIcon ch={ch} size={28} /> : <ChannelIcon ch={ch} size={20} />}
         <span class="ellipsis" style={{ maxWidth: 320 }}>{channelTitle(ch)}</span>
       </div>
       {ch.topic && (
-        <div class="topic ellipsis" onClick={() => openModal('confirm', { title: '#' + ch.name, text: <Md text={ch.topic} serverId={serverId} />, ok: 'OK', danger: false, resolve: () => {} })}>
+        <div class="topic ellipsis" onClick={() => (ch.type === 'group' ? openModal('groupSettings', { channelId: ch.id }) : openModal('confirm', { title: '#' + ch.name, text: <Md text={ch.topic} serverId={serverId} />, ok: 'OK', danger: false, resolve: () => {} }))}>
           {ch.topic}
         </div>
       )}

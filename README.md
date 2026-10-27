@@ -108,7 +108,7 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 
 **Chat**
 - Server mit Text-, Sprach-, Ankündigungs-, Forum- und Bühnen-Kanälen, Kategorien, private Kanäle
-- Direktnachrichten & Gruppenchats (bis 25 Personen), Anrufe & Videoanrufe mit Klingeln
+- Direktnachrichten & Gruppenchats (bis 25 Personen) mit Gruppenbild-Collage, Beschreibung & Gruppenfarbe, Anrufe & Videoanrufe mit Klingeln
 - Markdown (fett, kursiv, unterstrichen, durchgestrichen, Überschriften, Listen, Zitate, Code-Blöcke mit Highlighting, Spoiler `||so||`), Zeitstempel `<t:…>`
 - Antworten, Bearbeiten, Löschen, Anheften, Weiterleiten, Als ungelesen markieren
 - Reaktionen (inkl. Super-Reaktionen mit Shift+Klick), Threads, Umfragen, Sprachnachrichten
@@ -126,7 +126,7 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 - Moderation: Server-Mute/-Taub, Verschieben, Trennen
 
 **Profil & Anpassung (alles gratis)**
-- Animierte Avatare & Banner (GIF), Profil-Farbthemen, Avatar-Dekorationen, Profil-Effekte, Namens-Stile mit Schrift & Farbverlauf
+- Animierte Avatare & Banner (GIF), Profil-Farbthemen, über 60 Avatar-Dekorationen (davon 17 mehrschichtig animiert wie Portal, Schwarzes Loch, Engelsflügel, Cyber-HUD), animierte Profilrahmen, Profil-Effekte, Namens-Stile mit Schrift & Farbverlauf
 - Pro-Server-Profil (Nickname, Avatar, Banner, Bio), Pronomen, Bio mit Markdown
 - Status (Online/Abwesend/Bitte nicht stören/Unsichtbar), eigener Status mit Emoji & Ablaufzeit, Aktivität („Spielt …")
 - App-Themes (Tinte, Mitternacht, Dämmerung, Wald, Papier), freie Akzentfarbe, Bubble- oder Kompakt-Layout, Schriftgröße

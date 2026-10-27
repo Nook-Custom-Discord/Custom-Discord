@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'preact/hooks';
 import { S, update, prefs, setPref, openModal, openPopout, openMenu, toast } from './store';
 import { act, rpc, upload, sendMessage, loadOlder, loadMessages, displayName, channelTitle, serverIdOf, can, P, fileUrl, scheduleMarkRead, isUnread, allCustomEmojis, sortedChannels, navigate, jumpTo, avatarOf, openDM, pickFile } from './api';
-import { Avatar, ChannelIcon, fmtDay, fmtSize, fmtDateTime, Name, Spinner, fmtDuration } from './ui';
+import { Avatar, ChannelIcon, GroupIcon, fmtDay, fmtSize, fmtDateTime, Name, Spinner, fmtDuration, onlineCount } from './ui';
 import { Icon } from './icons';
 import { MessageGroup, Message, Md } from './message';
 import { BY_NAME, searchEmojis, EMOTICONS } from './emoji';
@@ -186,16 +186,7 @@ function ChatStart({ ch }) {
       </div>
     );
   }
-  if (ch.type === 'group')
-    return (
-      <div class="chat-start">
-        <div class="big">
-          <Icon name="users" size={36} />
-        </div>
-        <h2>{channelTitle(ch)}</h2>
-        <p>Willkommen am Anfang der Gruppe.</p>
-      </div>
-    );
+  if (ch.type === 'group') return <GroupStart ch={ch} />;
   return (
     <div class="chat-start">
       <div class="big">
@@ -203,6 +194,50 @@ function ChatStart({ ch }) {
       </div>
       <h2>{ch.type === 'thread' ? ch.name : `Willkommen in #${ch.name}!`}</h2>
       <p>{ch.type === 'thread' ? 'Hier beginnt der Thread.' : `Das ist der Anfang des Kanals #${ch.name}.`} {ch.topic}</p>
+    </div>
+  );
+}
+
+function GroupStart({ ch }) {
+  const members = ch.recipients;
+  return (
+    <div class="chat-start group-start" style={{ '--gc': ch.color || 'var(--accent)' }}>
+      <div class="gs-hero">
+        <GroupIcon ch={ch} size={84} />
+        <div class="grow" style={{ minWidth: 0 }}>
+          <h2 class="ellipsis">{channelTitle(ch)}</h2>
+          <p>{ch.topic || 'Willkommen am Anfang eurer Gruppe! Hier beginnt alles.'}</p>
+          <div class="gs-members">
+            <div class="gs-stack">
+              {members.slice(0, 6).map((id) => (
+                <span onClick={(e) => openPopout(e, 'profile', { uid: id })}>
+                  <Avatar uid={id} size={28} deco={false} />
+                </span>
+              ))}
+            </div>
+            <span>
+              {members.length} Mitglieder · <b style={{ color: 'var(--ok)' }}>{onlineCount(members)} online</b>
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="gs-actions">
+        <button class="gs-act" onClick={() => openModal('createGroup', { channelId: ch.id })}>
+          <Icon name="userPlus" />
+          <b>Freunde einladen</b>
+          <span>Bis zu 25 Leute</span>
+        </button>
+        <button class="gs-act" onClick={() => V.join(ch.id)}>
+          <Icon name="phone" />
+          <b>Anruf starten</b>
+          <span>Sprache, Video & Bildschirm</span>
+        </button>
+        <button class="gs-act" onClick={() => openModal('groupSettings', { channelId: ch.id })}>
+          <Icon name="edit" />
+          <b>Gruppe anpassen</b>
+          <span>Bild, Farbe & Beschreibung</span>
+        </button>
+      </div>
     </div>
   );
 }

@@ -232,9 +232,12 @@ function SystemMessage({ m, serverId }) {
     groupAdd: <>{who} hat {target} hinzugefügt.</>,
     groupRemove: <>{who} hat {target} entfernt.</>,
     groupLeave: <>{who} hat die Gruppe verlassen.</>,
+    groupRename: m.name ? <>{who} hat die Gruppe in <b>{m.name}</b> umbenannt.</> : <>{who} hat den Gruppennamen entfernt.</>,
+    groupIcon: <>{who} hat das Gruppenbild geändert.</>,
+    groupOwner: <>{who} hat {target} zum Gruppenbesitzer gemacht. 👑</>,
     thread: <>{who} hat einen Thread gestartet: <b onClick={() => S.channels[m.targetId] && navigate(serverId, m.channelId, m.targetId)}>{S.channels[m.targetId]?.name || 'Thread'}</b></>,
   };
-  const icon = { join: 'userPlus', leave: 'logout', pin: 'pin', thread: 'thread' }[m.kind] || 'users';
+  const icon = { join: 'userPlus', leave: 'logout', pin: 'pin', thread: 'thread', groupAdd: 'userPlus', groupLeave: 'logout', groupRename: 'edit', groupIcon: 'edit', groupOwner: 'crown' }[m.kind] || 'users';
   return (
     <div class="sysmsg" data-mid={m.id}>
       <Icon name={icon} />

@@ -4,7 +4,7 @@ import { act, rpc, pickAndUpload, fileUrl, logout, displayName, isElectron, copy
 import { Avatar, Switch, ToggleRow, Seg, Video, Spinner } from './ui';
 import { Icon } from './icons';
 import { ProfileCard } from './profile';
-import { DECORATIONS, EFFECTS, NAMEPLATES, NAME_FONTS, NAME_EFFECTS, Deco, EffectLayer, nameClasses, nameVars } from './cosmetics';
+import { DECORATIONS, EFFECTS, NAMEPLATES, NAME_FONTS, NAME_EFFECTS, FRAMES, Frame, EffectLayer } from './cosmetics';
 import { NameText } from './ui';
 import { V, QUALITY } from './voice';
 import { sfx } from './sounds';
@@ -123,24 +123,35 @@ function Account() {
 }
 
 // ---------- Profil ----------
+const profileState = (me) => ({
+  displayName: me.displayName,
+  avatar: me.avatar || '',
+  banner: me.banner || '',
+  bio: me.bio || '',
+  pronouns: me.pronouns || '',
+  accent: me.accent || '#ff7a45',
+  theme: me.theme || null,
+  decoration: me.decoration || '',
+  effect: me.effect || '',
+  nameStyle: me.nameStyle || null,
+  nameplate: me.nameplate || '',
+  frame: me.frame || '',
+});
+
+const PROFILE_TABS = [
+  ['general', 'Allgemein'],
+  ['deco', 'Avatar-Deko'],
+  ['fx', 'Effekte & Rahmen'],
+  ['name', 'Name & Schild'],
+];
+
 function Profile() {
   const me = S.me;
-  const [p, setP] = useState(() => ({
-    displayName: me.displayName,
-    avatar: me.avatar || '',
-    banner: me.banner || '',
-    bio: me.bio || '',
-    pronouns: me.pronouns || '',
-    accent: me.accent || '#ff7a45',
-    theme: me.theme || null,
-    decoration: me.decoration || '',
-    effect: me.effect || '',
-    nameStyle: me.nameStyle || null,
-    nameplate: me.nameplate || '',
-  }));
+  const [p, setP] = useState(() => profileState(me));
+  const [tab, setTab] = useState('general');
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setP({ ...p, [k]: v });
-  const dirty = JSON.stringify(p) !== JSON.stringify({ displayName: me.displayName, avatar: me.avatar || '', banner: me.banner || '', bio: me.bio || '', pronouns: me.pronouns || '', accent: me.accent || '#ff7a45', theme: me.theme || null, decoration: me.decoration || '', effect: me.effect || '', nameStyle: me.nameStyle || null, nameplate: me.nameplate || '' });
+  const dirty = JSON.stringify(p) !== JSON.stringify(profileState(me));
   const save = async () => {
     setBusy(true);
     try {
@@ -159,135 +170,149 @@ function Profile() {
     <>
       <h1>Profil</h1>
       <div class="hint" style={{ marginTop: -14, marginBottom: 18 }}>
-        ✨ Alles freigeschaltet: animierte Avatare & Banner (GIF), Profil-Farbthemen, Avatar-Dekorationen, Profil-Effekte und Namens-Stile.
+        ✨ Alles freigeschaltet: animierte Avatare & Banner (GIF), Profil-Farbthemen, animierte Avatar-Dekorationen, Profilrahmen, Profil-Effekte und Namens-Stile.
+      </div>
+      <div class="ptabs">
+        {PROFILE_TABS.map(([v, l]) => (
+          <button class={tab === v ? 'on' : ''} onClick={() => setTab(v)}>
+            {l}
+          </button>
+        ))}
       </div>
       <div class="row" style={{ alignItems: 'flex-start', gap: 24 }}>
-        <div class="grow" style={{ minWidth: 0 }}>
-          <div class="field">
-            <label>Anzeigename</label>
-            <input class="input" value={p.displayName} maxLength={32} onInput={(e) => set('displayName', e.target.value)} />
-          </div>
-          <div class="field">
-            <label>Pronomen</label>
-            <input class="input" value={p.pronouns} maxLength={40} placeholder="z. B. er/ihm, sie/ihr" onInput={(e) => set('pronouns', e.target.value)} />
-          </div>
-          <div class="field">
-            <label>Avatar (Bild oder GIF)</label>
-            <div class="row">
-              <button class="btn sm" onClick={() => up('avatar')}>Avatar ändern</button>
-              {p.avatar && <button class="btn link sm" onClick={() => set('avatar', '')}>Entfernen</button>}
-            </div>
-          </div>
-          <div class="field">
-            <label>Banner (Bild oder GIF)</label>
-            <div class="row">
-              <button class="btn sm" onClick={() => up('banner')}>Banner ändern</button>
-              {p.banner && <button class="btn link sm" onClick={() => set('banner', '')}>Entfernen</button>}
-            </div>
-          </div>
-          <div class="field">
-            <label>Bannerfarbe (wenn kein Bild)</label>
-            <div class="row">
-              <input type="color" value={p.accent} onInput={(e) => set('accent', e.target.value)} />
-              <div class="swatches">
-                {ACCENTS.map((c) => (
-                  <button class={`swatch ${p.accent === c ? 'on' : ''}`} style={{ background: c, width: 28, height: 28 }} onClick={() => set('accent', c)} />
-                ))}
+        <div class="grow ptab-body" style={{ minWidth: 0 }} key={tab}>
+          {tab === 'general' && (
+            <>
+              <div class="field">
+                <label>Anzeigename</label>
+                <input class="input" value={p.displayName} maxLength={32} onInput={(e) => set('displayName', e.target.value)} />
               </div>
-            </div>
-          </div>
-          <div class="field">
-            <label>Profil-Farbthema</label>
-            <div class="row">
-              <Switch on={!!p.theme} onChange={(v) => set('theme', v ? ['#2a1b3d', '#120c1c'] : null)} />
-              {p.theme && (
-                <>
-                  <span class="hint">Oben</span>
-                  <input type="color" value={p.theme[0]} onInput={(e) => set('theme', [e.target.value, p.theme[1]])} />
-                  <span class="hint">Unten</span>
-                  <input type="color" value={p.theme[1]} onInput={(e) => set('theme', [p.theme[0], e.target.value])} />
-                </>
-              )}
-            </div>
-          </div>
-          <div class="field">
-            <label>Über mich (Markdown möglich)</label>
-            <textarea class="textarea" value={p.bio} maxLength={400} onInput={(e) => set('bio', e.target.value)} placeholder="Erzähl was über dich" />
-            <div class="hint" style={{ textAlign: 'right' }}>{p.bio.length}/400</div>
-          </div>
-          <div class="field">
-            <label>Avatar-Dekoration ({DECORATIONS.length - 1})</label>
-            {[...new Set(DECORATIONS.map((d) => d.cat))].map((cat) => (
-              <>
-                <div class="cat-title">{cat}</div>
+              <div class="field">
+                <label>Pronomen</label>
+                <input class="input" value={p.pronouns} maxLength={40} placeholder="z. B. er/ihm, sie/ihr" onInput={(e) => set('pronouns', e.target.value)} />
+              </div>
+              <div class="field">
+                <label>Avatar (Bild oder GIF)</label>
+                <div class="row">
+                  <button class="btn sm" onClick={() => up('avatar')}>Avatar ändern</button>
+                  {p.avatar && <button class="btn link sm" onClick={() => set('avatar', '')}>Entfernen</button>}
+                </div>
+              </div>
+              <div class="field">
+                <label>Banner (Bild oder GIF)</label>
+                <div class="row">
+                  <button class="btn sm" onClick={() => up('banner')}>Banner ändern</button>
+                  {p.banner && <button class="btn link sm" onClick={() => set('banner', '')}>Entfernen</button>}
+                </div>
+              </div>
+              <div class="field">
+                <label>Akzent- & Bannerfarbe</label>
+                <div class="row">
+                  <input type="color" value={p.accent} onInput={(e) => set('accent', e.target.value)} />
+                  <div class="swatches">
+                    {ACCENTS.map((c) => (
+                      <button class={`swatch ${p.accent === c ? 'on' : ''}`} style={{ background: c, width: 28, height: 28 }} onClick={() => set('accent', c)} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <label>Profil-Farbthema</label>
+                <div class="row">
+                  <Switch on={!!p.theme} onChange={(v) => set('theme', v ? ['#2a1b3d', '#120c1c'] : null)} />
+                  {p.theme && (
+                    <>
+                      <span class="hint">Oben</span>
+                      <input type="color" value={p.theme[0]} onInput={(e) => set('theme', [e.target.value, p.theme[1]])} />
+                      <span class="hint">Unten</span>
+                      <input type="color" value={p.theme[1]} onInput={(e) => set('theme', [p.theme[0], e.target.value])} />
+                    </>
+                  )}
+                </div>
+              </div>
+              <div class="field">
+                <label>Über mich (Markdown möglich)</label>
+                <textarea class="textarea" value={p.bio} maxLength={400} onInput={(e) => set('bio', e.target.value)} placeholder="Erzähl was über dich" />
+                <div class="hint" style={{ textAlign: 'right' }}>{p.bio.length}/400</div>
+              </div>
+            </>
+          )}
+          {tab === 'deco' && <DecoPicker value={p.decoration} onPick={(v) => set('decoration', v)} avatar={fileUrl(p.avatar)} name={p.displayName} />}
+          {tab === 'fx' && (
+            <>
+              <div class="field">
+                <label>Profilrahmen ({FRAMES.length - 1})</label>
                 <div class="picker-grid">
-                  {DECORATIONS.filter((d) => d.cat === cat).map((d) => (
-                    <button class={`opt ${p.decoration === d.id ? 'on' : ''}`} onClick={() => set('decoration', d.id)}>
-                      <div class="avatar round" style={{ width: 48, height: 48, '--deco': p.accent, margin: '8px 0 2px' }}>
-                        <div class="img" style={{ background: p.accent }} />
-                        <Deco id={d.id} size={48} />
+                  {FRAMES.map((f) => (
+                    <button class={`opt ${p.frame === f.id ? 'on' : ''}`} onClick={() => set('frame', f.id)}>
+                      <div class={`frame-prev ${f.id ? 'framed fr-' + f.id : ''}`} style={{ '--uacc': p.accent }}>
+                        <Frame id={f.id} />
                       </div>
-                      <span class="ellipsis" style={{ maxWidth: '100%' }}>{d.name}</span>
+                      <span class="ellipsis" style={{ maxWidth: '100%' }}>{f.name}</span>
                     </button>
                   ))}
                 </div>
-              </>
-            ))}
-          </div>
-          <div class="field">
-            <label>Profil-Effekt ({EFFECTS.length - 1})</label>
-            <div class="picker-grid">
-              {EFFECTS.map((fx) => (
-                <button class={`opt ${p.effect === fx.id ? 'on' : ''}`} onClick={() => set('effect', fx.id)}>
-                  <div class="fx-preview">{fx.id && <EffectLayer id={fx.id} />}</div>
-                  <span class="ellipsis" style={{ maxWidth: '100%' }}>{fx.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div class="field">
-            <label>Namensschild (in Mitglieder- & DM-Liste)</label>
-            <div class="picker-grid">
-              {NAMEPLATES.map((np) => (
-                <button class={`opt ${p.nameplate === np.id ? 'on' : ''}`} onClick={() => set('nameplate', np.id)}>
-                  <div class={`np-preview ${np.id ? 'nameplate np-' + np.id : ''}`} style={!np.id ? { background: 'var(--bg2)' } : null} />
-                  <span class="ellipsis" style={{ maxWidth: '100%' }}>{np.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div class="field">
-            <label>Namens-Stil · Schrift</label>
-            <div class="picker-grid">
-              {NAME_FONTS.map(([v, l]) => (
-                <button class={`opt ${(p.nameStyle?.font || '') === v ? 'on' : ''}`} onClick={() => set('nameStyle', { ...(p.nameStyle || {}), font: v, colors: p.nameStyle?.colors || [] })}>
-                  <span class={`nfont-${v}`} style={{ fontSize: 16, fontWeight: 800 }}>{p.displayName.slice(0, 10) || 'Name'}</span>
-                  <span class="muted" style={{ fontSize: 11 }}>{l}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div class="field">
-            <label>Namens-Stil · Effekt</label>
-            <div class="picker-grid">
-              {NAME_EFFECTS.map(([v, l]) => (
-                <button class={`opt ${(p.nameStyle?.effect || '') === v ? 'on' : ''}`} onClick={() => set('nameStyle', { ...(p.nameStyle || {}), effect: v, colors: p.nameStyle?.colors || [] })}>
-                  <NameText text={(p.displayName || 'Name').slice(0, 10)} ns={{ ...(p.nameStyle || {}), effect: v }} style={{ fontSize: 15, fontWeight: 800 }} />
-                  <span class="muted" style={{ fontSize: 11 }}>{l}</span>
-                </button>
-              ))}
-            </div>
-            <div class="row" style={{ marginTop: 10 }}>
-              <Switch on={!!p.nameStyle?.colors?.[0]} onChange={(v) => set('nameStyle', { ...(p.nameStyle || {}), colors: v ? ['#ff7a45', '#f5c542'] : [] })} />
-              <span class="hint">Farbverlauf im Namen</span>
-              {p.nameStyle?.colors?.[0] && (
-                <>
-                  <input type="color" value={p.nameStyle.colors[0]} onInput={(e) => set('nameStyle', { ...p.nameStyle, colors: [e.target.value, p.nameStyle.colors[1]] })} />
-                  <input type="color" value={p.nameStyle.colors[1]} onInput={(e) => set('nameStyle', { ...p.nameStyle, colors: [p.nameStyle.colors[0], e.target.value] })} />
-                </>
-              )}
-            </div>
-          </div>
+              </div>
+              <div class="field">
+                <label>Profil-Effekt ({EFFECTS.length - 1})</label>
+                <div class="picker-grid">
+                  {EFFECTS.map((fx) => (
+                    <button class={`opt ${p.effect === fx.id ? 'on' : ''}`} onClick={() => set('effect', fx.id)}>
+                      <div class="fx-preview">{fx.id && <EffectLayer id={fx.id} />}</div>
+                      <span class="ellipsis" style={{ maxWidth: '100%' }}>{fx.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+          {tab === 'name' && (
+            <>
+              <div class="field">
+                <label>Namensschild (in Mitglieder- & DM-Liste)</label>
+                <div class="picker-grid">
+                  {NAMEPLATES.map((np) => (
+                    <button class={`opt ${p.nameplate === np.id ? 'on' : ''}`} onClick={() => set('nameplate', np.id)}>
+                      <div class={`np-preview ${np.id ? 'nameplate np-' + np.id : ''}`} style={!np.id ? { background: 'var(--bg2)' } : null} />
+                      <span class="ellipsis" style={{ maxWidth: '100%' }}>{np.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div class="field">
+                <label>Namens-Stil · Schrift</label>
+                <div class="picker-grid">
+                  {NAME_FONTS.map(([v, l]) => (
+                    <button class={`opt ${(p.nameStyle?.font || '') === v ? 'on' : ''}`} onClick={() => set('nameStyle', { ...(p.nameStyle || {}), font: v, colors: p.nameStyle?.colors || [] })}>
+                      <span class={`nfont-${v}`} style={{ fontSize: 16, fontWeight: 800 }}>{p.displayName.slice(0, 10) || 'Name'}</span>
+                      <span class="muted" style={{ fontSize: 11 }}>{l}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div class="field">
+                <label>Namens-Stil · Effekt</label>
+                <div class="picker-grid">
+                  {NAME_EFFECTS.map(([v, l]) => (
+                    <button class={`opt ${(p.nameStyle?.effect || '') === v ? 'on' : ''}`} onClick={() => set('nameStyle', { ...(p.nameStyle || {}), effect: v, colors: p.nameStyle?.colors || [] })}>
+                      <NameText text={(p.displayName || 'Name').slice(0, 10)} ns={{ ...(p.nameStyle || {}), effect: v }} style={{ fontSize: 15, fontWeight: 800 }} />
+                      <span class="muted" style={{ fontSize: 11 }}>{l}</span>
+                    </button>
+                  ))}
+                </div>
+                <div class="row" style={{ marginTop: 10 }}>
+                  <Switch on={!!p.nameStyle?.colors?.[0]} onChange={(v) => set('nameStyle', { ...(p.nameStyle || {}), colors: v ? ['#ff7a45', '#f5c542'] : [] })} />
+                  <span class="hint">Farbverlauf im Namen</span>
+                  {p.nameStyle?.colors?.[0] && (
+                    <>
+                      <input type="color" value={p.nameStyle.colors[0]} onInput={(e) => set('nameStyle', { ...p.nameStyle, colors: [e.target.value, p.nameStyle.colors[1]] })} />
+                      <input type="color" value={p.nameStyle.colors[1]} onInput={(e) => set('nameStyle', { ...p.nameStyle, colors: [p.nameStyle.colors[0], e.target.value] })} />
+                    </>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
         <div style={{ position: 'sticky', top: 0 }}>
           <div class="label" style={{ marginBottom: 8 }}>Vorschau</div>
@@ -295,13 +320,58 @@ function Profile() {
         </div>
       </div>
       {dirty && (
-        <div class="card row" style={{ position: 'sticky', bottom: 0, marginTop: 20, boxShadow: 'var(--shadow)' }}>
+        <div class="card row save-bar">
           <span class="grow">Du hast ungespeicherte Änderungen.</span>
-          <button class="btn link" onClick={() => setP({ displayName: me.displayName, avatar: me.avatar || '', banner: me.banner || '', bio: me.bio || '', pronouns: me.pronouns || '', accent: me.accent || '#ff7a45', theme: me.theme || null, decoration: me.decoration || '', effect: me.effect || '', nameStyle: me.nameStyle || null, nameplate: me.nameplate || '' })}>Zurücksetzen</button>
+          <button class="btn link" onClick={() => setP(profileState(me))}>Zurücksetzen</button>
           <button class="btn ok" onClick={save} disabled={busy}>Speichern</button>
         </div>
       )}
     </>
+  );
+}
+
+// Auswahl der Avatar-Dekorationen mit Kategorien, „Neu"-Filter und Suche
+function DecoPicker({ value, onPick, avatar, name }) {
+  const [cat, setCat] = useState('');
+  const [q, setQ] = useState('');
+  const cats = [...new Set(DECORATIONS.filter((d) => d.id).map((d) => d.cat))];
+  const list = DECORATIONS.filter((d) => d.id && (!cat || (cat === '*neu' ? d.neu : d.cat === cat)) && (!q || d.name.toLowerCase().includes(q.toLowerCase())));
+  const chip = (v, label) => (
+    <button class={`fchip ${cat === v ? 'on' : ''}`} onClick={() => setCat(v)}>
+      {label}
+    </button>
+  );
+  return (
+    <div class="field">
+      <div class="row" style={{ marginBottom: 4 }}>
+        <label class="label grow">Avatar-Dekoration ({DECORATIONS.length - 1})</label>
+        <div class="search-box" style={{ margin: 0 }}>
+          <Icon name="search" />
+          <input placeholder="Dekoration suchen" value={q} onInput={(e) => setQ(e.target.value)} />
+        </div>
+      </div>
+      <div class="fchips">
+        {chip('', 'Alle')}
+        {chip('*neu', '✨ Neu & animiert')}
+        {cats.map((c) => chip(c, c))}
+      </div>
+      <div class="picker-grid deco-grid">
+        {!q && !cat && (
+          <button class={`opt deco-opt ${!value ? 'on' : ''}`} onClick={() => onPick('')}>
+            <Avatar uid={S.me.id} size={52} src={avatar} name={name} decoration="" />
+            <span>Keine</span>
+          </button>
+        )}
+        {list.map((d) => (
+          <button class={`opt deco-opt ${value === d.id ? 'on' : ''}`} onClick={() => onPick(d.id)} key={d.id}>
+            {d.neu && <span class="neu">NEU</span>}
+            <Avatar uid={S.me.id} size={52} src={avatar} name={name} decoration={d.id} />
+            <span class="ellipsis" style={{ maxWidth: '100%' }}>{d.name}</span>
+          </button>
+        ))}
+        {!list.length && <div class="hint">Nichts gefunden.</div>}
+      </div>
+    </div>
   );
 }
 

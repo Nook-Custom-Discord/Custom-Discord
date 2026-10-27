@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, closeModal, openModal, toast, confirmDialog } from './store';
 import { act, rpc, upload, pickAndUpload, fileUrl, navigate, copy, displayName, channelTitle, serverIdOf, sortedChannels, dmList, can, P, sendMessage, openExternal, isUnread, openDM } from './api';
-import { Modal, Avatar, ServerIcon, ChannelIcon, Seg, Switch, ToggleRow } from './ui';
+import { Modal, Avatar, ServerIcon, ChannelIcon, GroupIcon, Seg, Switch, ToggleRow } from './ui';
 import { Icon } from './icons';
 import { ProfileModal, CustomStatusModal, ActivityModal } from './profile';
 import { ScreenShareModal } from './voiceui';
@@ -323,18 +323,38 @@ function ChannelSettingsModal({ channelId }) {
   );
 }
 
+const GROUP_COLORS = ['#ff7a45', '#f5c542', '#2dd4a7', '#4cc3ff', '#60a5fa', '#c084fc', '#ff5c8a', '#a3e635'];
+const GROUP_MAX = 25;
+
+function ColorPick({ value, onChange }) {
+  return (
+    <div class="swatches sm">
+      <button class={`swatch auto ${!value ? 'on' : ''}`} data-tip="Automatisch" onClick={() => onChange('')}>
+        <Icon name="x" size={14} />
+      </button>
+      {GROUP_COLORS.map((c) => (
+        <button class={`swatch ${value === c ? 'on' : ''}`} style={{ background: c }} onClick={() => onChange(c)} />
+      ))}
+    </div>
+  );
+}
+
 function CreateGroupModal({ channelId }) {
   const existing = channelId && S.channels[channelId];
   const friends = Object.entries(S.rel).filter(([, t]) => t === 'friend').map(([id]) => id).filter((id) => !existing?.recipients.includes(id));
   const [sel, setSel] = useState([]);
   const [q, setQ] = useState('');
   const [name, setName] = useState('');
+  const [color, setColor] = useState('');
   const isDM = existing?.type === 'dm';
+  const room = GROUP_MAX - (existing ? existing.recipients.length : 1);
+  const toggle = (id) => setSel(sel.includes(id) ? sel.filter((x) => x !== id) : sel.length < room ? [...sel, id] : sel);
+  const creating = isDM || (!existing && sel.length > 1);
   const go = async () => {
     if (isDM) {
       // Wie bei Discord: aus einer DM wird eine neue Gruppe mit allen
       const other = existing.recipients.find((r) => r !== S.me.id);
-      const ch = await act('createGroup', { userIds: [other, ...sel], name });
+      const ch = await act('createGroup', { userIds: [other, ...sel], name, color });
       S.channels[ch.id] = ch;
       closeModal();
       navigate('@me', ch.id);
@@ -349,25 +369,63 @@ function CreateGroupModal({ channelId }) {
       closeModal();
       return openDM(sel[0]);
     }
-    const ch = await act('createGroup', { userIds: sel, name });
+    const ch = await act('createGroup', { userIds: sel, name, color });
     S.channels[ch.id] = ch;
     closeModal();
     navigate('@me', ch.id);
   };
+  const shown = friends
+    .filter((id) => !q || displayName(id).toLowerCase().includes(q.toLowerCase()) || S.users[id]?.username.includes(q.toLowerCase()))
+    .sort((a, b) => (S.users[b]?.status !== 'offline') - (S.users[a]?.status !== 'offline') || displayName(a).localeCompare(displayName(b)));
   return (
-    <Modal title={isDM ? 'Freunde hinzufügen' : existing ? 'Zur Gruppe hinzufügen' : 'Gruppe erstellen'} sub={isDM ? `Dadurch entsteht eine neue Gruppe mit ${displayName(existing.recipients.find((r) => r !== S.me.id))}` : `Wähle Freunde aus (${sel.length}/24)`} footer={<button class="btn" disabled={!sel.length} onClick={go}>{isDM ? 'Gruppe erstellen' : existing ? 'Hinzufügen' : sel.length > 1 ? 'Gruppe erstellen' : 'Chat starten'}</button>}>
-      {(isDM || (!existing && sel.length > 1)) && <input class="input" placeholder="Gruppenname (optional)" value={name} onInput={(e) => setName(e.target.value)} style={{ marginBottom: 10 }} />}
-      <input class="input" placeholder="Freunde suchen" value={q} onInput={(e) => setQ(e.target.value)} style={{ marginBottom: 10 }} />
-      <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-        {friends.filter((id) => !q || displayName(id).toLowerCase().includes(q.toLowerCase())).map((id) => (
-          <label class="row" style={{ padding: '7px 6px', cursor: 'pointer', borderRadius: 10 }}>
-            <Avatar uid={id} size={32} status />
-            <span class="grow">{displayName(id)} <span class="muted">@{S.users[id]?.username}</span></span>
-            <input type="checkbox" checked={sel.includes(id)} onChange={(e) => setSel(e.target.checked ? [...sel, id] : sel.filter((x) => x !== id))} />
-          </label>
+    <Modal
+      title={isDM ? 'Freunde hinzufügen' : existing ? 'Zur Gruppe hinzufügen' : 'Gruppe erstellen'}
+      sub={isDM ? `Dadurch entsteht eine neue Gruppe mit ${displayName(existing.recipients.find((r) => r !== S.me.id))}.` : `Wähle Freunde aus · noch ${room - sel.length} ${room - sel.length === 1 ? 'Platz' : 'Plätze'} frei`}
+      footer={
+        <button class="btn" disabled={!sel.length} onClick={go}>
+          {isDM ? 'Gruppe erstellen' : existing ? `Hinzufügen${sel.length ? ` (${sel.length})` : ''}` : sel.length > 1 ? `Gruppe erstellen (${sel.length + 1})` : 'Chat starten'}
+        </button>
+      }
+    >
+      <div class="pick-box">
+        {sel.map((id) => (
+          <button class="pick-chip" onClick={() => toggle(id)} data-tip="Entfernen">
+            <Avatar uid={id} size={20} deco={false} />
+            {displayName(id)}
+            <Icon name="x" size={13} />
+          </button>
         ))}
-        {!friends.length && <div class="hint">Du brauchst zuerst Freunde.</div>}
+        <input placeholder={sel.length ? 'Weitere suchen …' : 'Freunde suchen'} value={q} onInput={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Backspace' && !q && sel.length && setSel(sel.slice(0, -1))} autoFocus />
       </div>
+      <div class="pick-list">
+        {shown.map((id) => {
+          const on = sel.includes(id);
+          return (
+            <button class={`pick-row ${on ? 'on' : ''}`} onClick={() => toggle(id)}>
+              <Avatar uid={id} size={36} status />
+              <span class="grow" style={{ minWidth: 0 }}>
+                <b class="ellipsis" style={{ display: 'block' }}>{displayName(id)}</b>
+                <span class="muted ellipsis" style={{ display: 'block', fontSize: 12.5 }}>@{S.users[id]?.username}</span>
+              </span>
+              <span class={`pick-check ${on ? 'on' : ''}`}>{on && <Icon name="check" size={14} />}</span>
+            </button>
+          );
+        })}
+        {!friends.length && <div class="hint">Du brauchst zuerst Freunde.</div>}
+        {friends.length > 0 && !shown.length && <div class="hint">Niemand gefunden.</div>}
+      </div>
+      {creating && (
+        <div class="pick-extra">
+          <div class="field" style={{ margin: 0 }}>
+            <label>Gruppenname (optional)</label>
+            <input class="input" placeholder="z. B. Die Crew" value={name} maxLength={60} onInput={(e) => setName(e.target.value)} />
+          </div>
+          <div class="field" style={{ margin: '12px 0 0' }}>
+            <label>Gruppenfarbe</label>
+            <ColorPick value={color} onChange={setColor} />
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }
@@ -375,14 +433,23 @@ function CreateGroupModal({ channelId }) {
 function GroupSettingsModal({ channelId }) {
   const ch = S.channels[channelId];
   const [name, setName] = useState(ch?.name || '');
+  const [topic, setTopic] = useState(ch?.topic || '');
+  const [color, setColor] = useState(ch?.color || '');
+  const [q, setQ] = useState('');
   if (!ch) return null;
   const owner = ch.ownerId === S.me.id;
+  const dirty = name !== (ch.name || '') || topic !== (ch.topic || '') || color !== (ch.color || '');
   const leave = async () => {
     if (!(await confirmDialog('Gruppe verlassen', `„${channelTitle(ch)}" wirklich verlassen?`, { ok: 'Verlassen' }))) return;
     await act('groupRemove', { channelId, userId: S.me.id });
     closeModal();
     navigate('@me', null);
   };
+  const online = (id) => S.users[id] && S.users[id].status !== 'offline';
+  const members = ch.recipients
+    .filter((id) => !q || displayName(id).toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => (b === ch.ownerId) - (a === ch.ownerId) || online(b) - online(a) || displayName(a).localeCompare(displayName(b)));
+  const live = { ...ch, color };
   return (
     <Modal
       title="Gruppeneinstellungen"
@@ -394,49 +461,77 @@ function GroupSettingsModal({ channelId }) {
           <button class="btn ghost" onClick={closeModal}>
             Schließen
           </button>
-          <button class="btn" onClick={async () => { await act('updateGroup', { channelId, name }, 'Gespeichert'); closeModal(); }}>
+          <button class="btn" disabled={!dirty} onClick={async () => { await act('updateGroup', { channelId, name, topic, color }, 'Gespeichert'); closeModal(); }}>
             Speichern
           </button>
         </>
       }
     >
-      <div class="row" style={{ marginBottom: 16 }}>
-        <button
-          onClick={async () => { const r = await pickAndUpload('image/*'); if (r) act('updateGroup', { channelId, icon: r.url }); }}
-          style={{ width: 72, height: 72, borderRadius: 24, border: '2px dashed var(--line2)', overflow: 'hidden', display: 'grid', placeItems: 'center', background: 'var(--bg2)', flex: 'none' }}
-          data-tip="Gruppenbild ändern"
-        >
-          {ch.icon ? <img src={fileUrl(ch.icon)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Icon name="upload" />}
+      <div class="gset-hero" style={{ '--gc': color || 'var(--accent)' }}>
+        <button class="gset-icon" onClick={async () => { const r = await pickAndUpload('image/*'); if (r) act('updateGroup', { channelId, icon: r.url }); }} data-tip="Gruppenbild ändern">
+          <GroupIcon ch={live} size={76} />
+          <span class="gset-edit">
+            <Icon name="upload" size={20} />
+          </span>
         </button>
-        <div class="field grow" style={{ margin: 0 }}>
-          <label>Gruppenname</label>
-          <input class="input" value={name} placeholder={channelTitle({ ...ch, name: '' })} onInput={(e) => setName(e.target.value)} maxLength={60} />
+        <div class="grow" style={{ minWidth: 0 }}>
+          <div class="gset-name ellipsis">{name || channelTitle({ ...ch, name: '' })}</div>
+          <div class="muted" style={{ fontSize: 13 }}>
+            {ch.recipients.length} Mitglieder · erstellt am {new Date(ch.createdAt).toLocaleDateString('de-DE')}
+          </div>
+          {ch.icon && (
+            <button class="btn link sm" style={{ padding: 0, marginTop: 4 }} onClick={() => act('updateGroup', { channelId, icon: '' })}>
+              Bild entfernen
+            </button>
+          )}
         </div>
       </div>
-      <div class="row" style={{ marginBottom: 8 }}>
-        <div class="label grow">Mitglieder — {ch.recipients.length}</div>
-        <button class="btn sm" onClick={() => openModal('createGroup', { channelId })}>
+      <div class="field">
+        <label>Gruppenname</label>
+        <input class="input" value={name} placeholder={channelTitle({ ...ch, name: '' })} onInput={(e) => setName(e.target.value)} maxLength={60} />
+      </div>
+      <div class="field">
+        <label>Beschreibung</label>
+        <textarea class="textarea" style={{ minHeight: 60 }} value={topic} maxLength={200} placeholder="Worum geht's in dieser Gruppe?" onInput={(e) => setTopic(e.target.value)} />
+      </div>
+      <div class="field">
+        <label>Gruppenfarbe</label>
+        <ColorPick value={color} onChange={setColor} />
+      </div>
+      <div class="row" style={{ margin: '18px 0 8px' }}>
+        <div class="label grow">Mitglieder — {ch.recipients.length}/{GROUP_MAX}</div>
+        <button class="btn sm" disabled={ch.recipients.length >= GROUP_MAX} onClick={() => openModal('createGroup', { channelId })}>
           <Icon name="userPlus" /> Hinzufügen
         </button>
       </div>
-      {ch.recipients.map((id) => (
-        <div class="list-row">
-          <Avatar uid={id} size={32} status />
-          <div class="grow">
-            <b>{displayName(id)}</b> {ch.ownerId === id && <span class="chip">👑 Besitzer</span>}
+      {ch.recipients.length > 6 && <input class="input" placeholder="Mitglieder suchen" value={q} onInput={(e) => setQ(e.target.value)} style={{ marginBottom: 8 }} />}
+      <div class="gset-members">
+        {members.map((id) => (
+          <div class="gset-member">
+            <Avatar uid={id} size={36} status />
+            <div class="grow" style={{ minWidth: 0 }}>
+              <div class="row" style={{ gap: 6 }}>
+                <b class="ellipsis">{displayName(id)}</b>
+                {ch.ownerId === id && <Icon name="crown" size={14} style={{ color: 'var(--warn)', flex: 'none' }} />}
+                {id === S.me.id && <span class="chip" style={{ padding: '1px 7px', fontSize: 11 }}>Du</span>}
+              </div>
+              <div class="muted ellipsis" style={{ fontSize: 12.5 }}>
+                @{S.users[id]?.username} · {online(id) ? 'online' : 'offline'}
+              </div>
+            </div>
+            {owner && id !== S.me.id && (
+              <>
+                <button class="ibtn sm" data-tip="Zum Besitzer machen" onClick={async () => (await confirmDialog('Besitz übertragen', `${displayName(id)} wird neuer Besitzer der Gruppe.`, { ok: 'Übertragen', danger: false })) && act('updateGroup', { channelId, ownerId: id }, 'Besitz übertragen')}>
+                  <Icon name="crown" />
+                </button>
+                <button class="ibtn sm red" data-tip="Aus Gruppe entfernen" onClick={() => act('groupRemove', { channelId, userId: id })}>
+                  <Icon name="x" />
+                </button>
+              </>
+            )}
           </div>
-          {owner && id !== S.me.id && (
-            <>
-              <button class="btn ghost sm" onClick={() => act('updateGroup', { channelId, ownerId: id }, 'Besitz übertragen')}>
-                Zum Besitzer
-              </button>
-              <button class="ibtn red" data-tip="Entfernen" onClick={() => act('groupRemove', { channelId, userId: id })}>
-                <Icon name="x" />
-              </button>
-            </>
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
     </Modal>
   );
 }
