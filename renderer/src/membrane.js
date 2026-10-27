@@ -11,7 +11,7 @@ export const WEBS = {
 };
 
 // deterministischer Zufall, damit jede Variante immer gleich aussieht
-function rng(seed) {
+export function rng(seed) {
   let s = seed >>> 0;
   return () => {
     s = (s * 1664525 + 1013904223) >>> 0;
@@ -19,7 +19,7 @@ function rng(seed) {
   };
 }
 
-const f = (n) => Math.round(n * 10) / 10;
+export const f = (n) => Math.round(n * 10) / 10;
 
 // Löcher wachsen, bis sie fast an ihre Nachbarn stoßen (Abstand = Strangdicke) -> dichtes, dünnes Netz.
 // place() liefert Mittelpunkt + Wunschradius; zu kleine Lücken werden übersprungen.

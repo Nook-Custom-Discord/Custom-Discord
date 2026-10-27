@@ -5898,15 +5898,67 @@ svg.dfx-wing.r {
     box-shadow: inset 0 0 70px -4px var(--wg);
   }
 }
-.web-drip {
+.art-p {
   position: absolute;
+  pointer-events: none;
+  animation-iteration-count: infinite;
+}
+/* Netze: Tropfen laufen herab */
+.art-drip {
   width: 7px;
   height: 10px;
   border-radius: 50% 50% 50% 50% / 35% 35% 65% 65%;
   background: radial-gradient(circle at 35% 30%, #fff 0 12%, var(--wc) 30%, var(--wg) 100%);
   box-shadow: 0 0 6px var(--wg);
-  animation: web-drip ease-in infinite;
+  animation-name: web-drip;
+  animation-timing-function: ease-in;
   opacity: 0;
+}
+/* Dornen: Rosenblätter segeln herab */
+.art-petal {
+  width: 10px;
+  height: 7px;
+  border-radius: 100% 0 100% 0;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--wc) 60%, #fff), var(--wc) 55%, color-mix(in srgb, var(--wc) 60%, #000));
+  box-shadow: 0 0 4px color-mix(in srgb, var(--wg) 60%, transparent);
+  animation-name: art-petal;
+  animation-timing-function: linear;
+  opacity: 0;
+}
+@keyframes art-petal {
+  0% {
+    transform: translate(0, 0) rotate(var(--rot));
+    opacity: 0;
+  }
+  10%,
+  80% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(var(--sx), 560px) rotate(calc(var(--rot) + 540deg));
+    opacity: 0;
+  }
+}
+/* Kristalle: Sterne funkeln auf */
+.art-spark {
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle, #fff 0 18%, transparent 22%), linear-gradient(#fff, #fff) center/2px 100% no-repeat, linear-gradient(#fff, #fff) center/100% 2px no-repeat;
+  filter: drop-shadow(0 0 4px var(--wg));
+  animation-name: art-spark;
+  animation-timing-function: ease-in-out;
+  opacity: 0;
+}
+@keyframes art-spark {
+  0%,
+  100% {
+    transform: scale(0.2) rotate(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1) rotate(90deg);
+    opacity: 1;
+  }
 }
 @keyframes web-drip {
   0% {
@@ -6001,4 +6053,19 @@ svg.dfx-wing.r {
 }
 .bundle.on .btn {
   background: var(--wg);
+}
+/* Effekt-Vorschau im Paket: auf die obere Ecke zoomen, damit man das Motiv erkennt */
+.bundle-item .fx-web {
+  box-shadow: none;
+  animation: none;
+}
+.bundle-item .fx-web-art {
+  background-size: 300% auto !important;
+  background-position: 0 0 !important;
+  -webkit-mask: none;
+  mask: none;
+  animation: none;
+}
+.bundle-item .art-p {
+  display: none;
 }
