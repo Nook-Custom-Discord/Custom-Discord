@@ -157,7 +157,15 @@ function ActiveNow() {
   return (
     <div class="active-now">
       <h3>Gerade aktiv</h3>
-      {cards.length ? cards : <div class="hint" style={{ textAlign: 'center', padding: '20px 10px' }}>Gerade ist es ruhig … Wenn Freunde in einem Sprachkanal sind oder etwas spielen, siehst du das hier.</div>}
+      {cards.length ? (
+        cards
+      ) : (
+        <div class="an-empty">
+          <div class="an-empty-art">🌙</div>
+          <b>Gerade ist es ruhig …</b>
+          <div class="hint">Wenn Freunde in einem Sprachkanal sind oder etwas spielen, siehst du das hier.</div>
+        </div>
+      )}
     </div>
   );
 }

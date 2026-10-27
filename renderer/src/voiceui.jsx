@@ -86,10 +86,10 @@ function TileTools({ children, hasVideo }) {
 }
 
 // ---------- Kachel ----------
-// unscharfer Kachel-Hintergrund aus dem Avatar; Video-Avatare taugen nicht als Hintergrundbild -> Akzentfarbe
+// unscharfer Kachel-Hintergrund aus dem Avatar; ohne (Bild-)Avatar zeigt die Kachel ihren Farbverlauf in der Nutzerfarbe
 function tileBg(uid, serverId) {
   const av = avatarOf(uid, serverId);
-  return av && !isVideoUrl(av) ? { backgroundImage: `url(${av})` } : { backgroundColor: S.users[uid]?.accent || 'var(--panel3)' };
+  return av && !isVideoUrl(av) ? { backgroundImage: `url(${av})` } : { display: 'none' };
 }
 
 function Tile({ uid, kind = 'user', serverId, small, onClick }) {
@@ -153,7 +153,7 @@ function Tile({ uid, kind = 'user', serverId, small, onClick }) {
   const cam = me ? V.camStream : V.remote[uid]?.camera;
   const showCam = vs.video && cam;
   return (
-    <div class={`tile ${speaking ? 'speaking' : ''}`} data-uid={uid} data-kind="user" onClick={onClick} onContextMenu={(e) => voiceUserMenu(e, uid, serverId)} onDblClick={(e) => toggleFullscreen(e.currentTarget)}>
+    <div class={`tile ${speaking ? 'speaking' : ''}`} style={{ '--tc': S.users[uid]?.accent }} data-uid={uid} data-kind="user" onClick={onClick} onContextMenu={(e) => voiceUserMenu(e, uid, serverId)} onDblClick={(e) => toggleFullscreen(e.currentTarget)}>
       {showCam ? (
         <Video stream={cam} mirror={me} cover={!small} />
       ) : (

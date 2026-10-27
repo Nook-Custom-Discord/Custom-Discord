@@ -187,13 +187,43 @@ function ChatStart({ ch }) {
     );
   }
   if (ch.type === 'group') return <GroupStart ch={ch} />;
-  return (
-    <div class="chat-start">
-      <div class="big">
-        <ChannelIcon ch={ch} size={36} />
+  if (ch.type === 'thread')
+    return (
+      <div class="chat-start">
+        <div class="big">
+          <ChannelIcon ch={ch} size={36} />
+        </div>
+        <h2>{ch.name}</h2>
+        <p>Hier beginnt der Thread.</p>
       </div>
-      <h2>{ch.type === 'thread' ? ch.name : `Willkommen in #${ch.name}!`}</h2>
-      <p>{ch.type === 'thread' ? 'Hier beginnt der Thread.' : `Das ist der Anfang des Kanals #${ch.name}.`} {ch.topic}</p>
+    );
+  // Server-Kanal: großer Kopfbereich mit Schnellaktionen
+  const serverId = ch.serverId;
+  const acts = [
+    can(serverId, P.CREATE_INVITE) && ['userPlus', 'Freunde einladen', 'Einladungslink teilen', () => openModal('invite', { serverId })],
+    ['bell', 'Benachrichtigungen', 'Wann du gepingt wirst', () => openModal('notif', { serverId, channelId: ch.id })],
+    can(serverId, P.MANAGE_CHANNELS) && ['edit', 'Kanal anpassen', 'Name, Thema & Rechte', () => openModal('channelSettings', { channelId: ch.id })],
+  ].filter(Boolean);
+  return (
+    <div class="chat-start group-start chan-hero">
+      <div class="gs-hero">
+        <div class="big-ic">
+          <ChannelIcon ch={ch} size={40} />
+        </div>
+        <div class="grow" style={{ minWidth: 0 }}>
+          <h2 class="ellipsis">Willkommen in #{ch.name}!</h2>
+          <p>{ch.topic || `Das ist der Anfang von #${ch.name} auf ${S.servers[serverId]?.name || 'diesem Server'}. Sag hallo! 👋`}</p>
+        </div>
+      </div>
+      <div class="gs-actions">
+        {acts.map(([icon, title, sub, fn]) => (
+          <button class="gs-act" onClick={fn}>
+            <Icon name={icon} />
+            <b>{title}</b>
+            <span>{sub}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -68,15 +68,22 @@ function Login() {
   return (
     <div class="login">
       <div class="art">
-        <div class="blob" style={{ width: 240, height: 240, top: 80, left: 70, background: 'color-mix(in srgb, var(--accent) 55%, transparent)' }} />
-        <div class="blob" style={{ width: 160, height: 160, top: 220, right: 90, background: 'rgba(76,195,255,.35)', animationDelay: '-4s' }} />
-        <div class="blob" style={{ width: 90, height: 90, top: 60, right: 220, background: 'rgba(245,197,66,.4)', animationDelay: '-7s' }} />
+        <div class="blob" style={{ width: 260, height: 260, top: 60, left: 40, background: 'color-mix(in srgb, var(--accent) 60%, transparent)' }} />
+        <div class="blob" style={{ width: 180, height: 180, bottom: 120, right: 60, background: 'color-mix(in srgb, var(--accent2) 55%, transparent)', animationDelay: '-4s' }} />
+        <div class="blob" style={{ width: 110, height: 110, top: 80, right: 200, background: 'color-mix(in srgb, var(--accent3) 55%, transparent)', animationDelay: '-7s' }} />
         <div style={{ position: 'relative' }}>
           <div class="logo-mark" style={{ width: 56, height: 56, borderRadius: 18, marginBottom: 22 }}>
             <LogoMark size={32} />
           </div>
           <h1>Nook.</h1>
           <p>Euer privater Treffpunkt. Chatten, quatschen, zocken, streamen – nur ihr, auf eurem eigenen Server. Alles gratis, alles freigeschaltet.</p>
+          <div class="login-feats">
+            <span>💬 Chats & Gruppen</span>
+            <span>🎙️ Sprache in Studioqualität</span>
+            <span>🖥️ Streams bis 4K</span>
+            <span>✨ Animierte Profile</span>
+            <span>🔒 Eigener Server</span>
+          </div>
         </div>
       </div>
       <div class="form">
@@ -89,7 +96,7 @@ function Login() {
             <label>Server-Adresse</label>
             <input class="input" value={server} onInput={(e) => setServer(e.target.value)} placeholder="z. B. 84.123.45.67:3500" />
             <div class="hint">
-              {info === null ? 'Prüfe …' : info === false ? <span class="err">{isElectron && /localhost|127\.0\.0\.1/.test(server) ? 'Auf diesem PC läuft noch kein Server – klicke unten auf „Server auf diesem PC starten" (oder trag die Adresse deines Hosts ein).' : 'Kein Nook-Server unter dieser Adresse erreichbar'}</span> : <span style={{ color: 'var(--ok)' }}>✓ Nook-Server gefunden · {info.users} Mitglieder</span>}
+              {info === null ? 'Prüfe …' : info === false ? <span class="err">{isElectron && /localhost|127\.0\.0\.1/.test(server) ? 'Auf diesem PC läuft noch kein Server – klicke unten auf „Server auf diesem PC starten" (oder trag die Adresse deines Hosts ein).' : 'Kein Nook-Server unter dieser Adresse erreichbar'}</span> : <span class="login-status" style={{ color: 'var(--ok)' }}>Nook-Server gefunden · {info.users} Mitglieder</span>}
             </div>
           </div>
           {mode === 'register' && (

@@ -137,6 +137,7 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 - Status (Online/Abwesend/Bitte nicht stören/Unsichtbar), eigener Status mit Emoji & Ablaufzeit, Aktivität („Spielt …")
 - App-Themes (Tinte, Mitternacht, Dämmerung, Wald, Papier) mit kreisförmigem Überblenden, freie Akzentfarbe, Bubble- oder Kompakt-Layout, Schriftgröße
 - 8 Sound-Pakete (Nook, Kristall, Blubber, Retro, Lo-Fi, Sci-Fi, Marimba, Dezent), eigene Sound-Dateien pro Ereignis (auch als Klingelton), jedes Ereignis einzeln an/aus
+- Nook-2.0-Look: fließender Aurora-Hintergrund in der Akzentfarbe, durchscheinende Panels, leuchtende Verlaufs-Blasen für eigene Nachrichten, Sprachkacheln mit Schallwellen und schwebender Steuerleiste
 - Animierte Oberfläche: Klick-Wellen, Licht-Effekt auf Karten, gestaffelt einblendende Listen, weiche Kanal- und Seitenwechsel (abschaltbar über „Animationen reduzieren")
 
 **Verwaltung**
