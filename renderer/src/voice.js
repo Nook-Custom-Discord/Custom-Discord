@@ -30,11 +30,13 @@ function dbFromAnalyser(an, buf) {
   return rms > 0 ? 20 * Math.log10(rms) : -100;
 }
 
-function preferCodecs(transceiver, kind) {
+// Codec-Reihenfolge: Bewegung (Spiele, Videos) -> H264, meist mit Hardware-Encoder;
+// Details (Text, Code) -> VP9, bleibt bei wenig Bandbreite deutlich schärfer
+function preferCodecs(transceiver, kind, content = 'motion') {
   try {
     const caps = RTCRtpReceiver.getCapabilities(kind)?.codecs;
     if (!caps || !transceiver.setCodecPreferences) return;
-    const order = kind === 'video' ? ['video/H264', 'video/VP9', 'video/AV1', 'video/VP8'] : ['audio/opus'];
+    const order = kind !== 'video' ? ['audio/opus'] : content === 'detail' ? ['video/VP9', 'video/H264', 'video/AV1', 'video/VP8'] : ['video/H264', 'video/VP9', 'video/AV1', 'video/VP8'];
     const sorted = [...caps].sort((a, b) => {
       const ia = order.indexOf(a.mimeType);
       const ib = order.indexOf(b.mimeType);
@@ -67,6 +69,7 @@ class VoiceEngine {
     this.soundFx = []; // { userId, emoji, at }
     this.joining = false;
     this.focus = null;
+    this.screenStats = {}; // uid -> { w, h, fps, kbps } für angesehene Streams
     this.buf = new Float32Array(512);
 
     window.addEventListener('keydown', (e) => {
@@ -298,12 +301,20 @@ class VoiceEngine {
     for (const p of this.peers.values()) {
       try {
         const stats = await p.pc.getStats();
+        const screenTrack = this.remote[p.uid]?.screen?.getVideoTracks()[0]?.id;
         stats.forEach((r) => {
           if (r.type === 'candidate-pair' && r.state === 'succeeded' && r.nominated && r.currentRoundTripTime != null) {
             total += r.currentRoundTripTime * 1000;
             n++;
           }
+          // Auflösung, FPS und Datenrate des angesehenen Streams (für die Anzeige in der Kachel)
+          if (screenTrack && r.type === 'inbound-rtp' && r.kind === 'video' && r.trackIdentifier === screenTrack) {
+            const prev = this.screenStats[p.uid];
+            const kbps = prev?.bytes != null && r.timestamp > prev.ts ? Math.round(((r.bytesReceived - prev.bytes) * 8) / (r.timestamp - prev.ts)) : 0;
+            this.screenStats[p.uid] = { w: r.frameWidth, h: r.frameHeight, fps: Math.round(r.framesPerSecond || 0), kbps, bytes: r.bytesReceived, ts: r.timestamp };
+          }
         });
+        if (!screenTrack) delete this.screenStats[p.uid];
       } catch {}
     }
     this.ping = n ? Math.round(total / n) : null;
@@ -393,6 +404,7 @@ class VoiceEngine {
         } else {
           this.viewers.delete(from);
           this.removeSenders(peer, 'screen');
+          this.tuneScreenSenders();
         }
         update();
       }
@@ -411,15 +423,21 @@ class VoiceEngine {
     const r = (this.remote[uid] = this.remote[uid] || {});
     r[kind] = stream;
     if (e.track.kind === 'audio') this.attachAudio(uid, kind, stream);
+    // Nur wirklich beendete Tracks aufräumen. "muted" heißt bei Bildschirmen oft nur: gerade kein neues Bild,
+    // weil sich nichts bewegt – früher verschwand der Stream dann dauerhaft.
     const cleanup = () => {
-      if (stream.getTracks().every((t) => t.readyState === 'ended' || t.muted) || !stream.getTracks().length) {
+      if (stream.getTracks().every((t) => t.readyState === 'ended') || !stream.getTracks().length) {
         if (this.remote[uid]?.[kind] === stream) delete this.remote[uid][kind];
         update();
       }
     };
     stream.onremovetrack = cleanup;
     e.track.onended = cleanup;
-    e.track.onunmute = () => update();
+    e.track.onunmute = () => {
+      const rr = (this.remote[uid] = this.remote[uid] || {});
+      if (!rr[kind]) rr[kind] = stream;
+      update();
+    };
     update();
   }
 
@@ -566,26 +584,52 @@ class VoiceEngine {
     const t = peer.pc.addTransceiver(vt, {
       direction: 'sendonly',
       streams: [this.screenStream],
-      sendEncodings: [{ maxBitrate: q.br, maxFramerate: q.fps, priority: 'high', networkPriority: 'high' }],
+      sendEncodings: [{ maxBitrate: this.screenBitrate(), maxFramerate: q.fps, priority: 'high', networkPriority: 'high' }],
     });
-    preferCodecs(t, 'video');
+    preferCodecs(t, 'video', this.screenContent);
     peer.screen = [t.sender];
     const at = this.screenStream.getAudioTracks()[0];
     if (at) {
-      const ta = peer.pc.addTransceiver(at, { direction: 'sendonly', streams: [this.screenStream], sendEncodings: [{ maxBitrate: 256000 }] });
+      const ta = peer.pc.addTransceiver(at, { direction: 'sendonly', streams: [this.screenStream], sendEncodings: [{ maxBitrate: 256000, priority: 'high' }] });
       peer.screen.push(ta.sender);
     }
-    setTimeout(async () => {
+    // neuer Zuschauer -> Bitrate auf alle Zuschauer neu aufteilen
+    this.tuneScreenSenders();
+  }
+
+  // Die Upload-Leitung teilen sich alle Zuschauer (jeder bekommt einen eigenen Stream). Bei mehreren
+  // Zuschauern wird die Obergrenze pro Person gesenkt, damit niemand ins Stocken gerät.
+  screenBitrate() {
+    const q = this.screenQ;
+    const n = Math.max(1, this.viewers.size);
+    return Math.max(2_500_000, Math.round(q.br / Math.sqrt(n)));
+  }
+
+  // Parameter erst setzen, wenn die Verbindung ausgehandelt ist (vorher gibt es keine Encodings) -> notfalls erneut versuchen
+  tuneScreenSenders(attempt = 0) {
+    if (!this.screenStream) return;
+    clearTimeout(this.tuneTimer);
+    let pending = false;
+    for (const peer of this.peers.values()) {
+      const s = peer.screen[0];
+      if (!s) continue;
       try {
-        const p = t.sender.getParameters();
-        p.degradationPreference = this.screenContent === 'detail' ? 'maintain-resolution' : 'maintain-framerate';
-        if (p.encodings?.[0]) {
-          p.encodings[0].maxBitrate = q.br;
-          p.encodings[0].maxFramerate = q.fps;
+        const p = s.getParameters();
+        if (!p.encodings?.length) {
+          pending = true;
+          continue;
         }
-        await t.sender.setParameters(p);
-      } catch {}
-    }, 1500);
+        p.degradationPreference = this.screenContent === 'detail' ? 'maintain-resolution' : 'maintain-framerate';
+        p.encodings[0].maxBitrate = this.screenBitrate();
+        p.encodings[0].maxFramerate = this.screenQ.fps;
+        p.encodings[0].priority = 'high';
+        p.encodings[0].networkPriority = 'high';
+        s.setParameters(p).catch(() => {});
+      } catch {
+        pending = true;
+      }
+    }
+    if (pending && attempt < 20) this.tuneTimer = setTimeout(() => this.tuneScreenSenders(attempt + 1), 500);
   }
 
   async stopScreen(silent) {
@@ -612,6 +656,7 @@ class VoiceEngine {
     if (this.remote[uid]) delete this.remote[uid].screen;
     this.dropAudio(uid + ':screen');
     if (this.focus?.uid === uid && this.focus.kind === 'screen') this.focus = null;
+    delete this.screenStats[uid];
     update();
   }
 

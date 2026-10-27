@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, closeModal, openModal, toast, confirmDialog } from './store';
-import { act, rpc, upload, pickAndUpload, fileUrl, navigate, copy, displayName, channelTitle, serverIdOf, sortedChannels, dmList, can, P, sendMessage, openExternal, isUnread, openDM } from './api';
+import { act, rpc, upload, pickAndUpload, pickAvatar, fileUrl, navigate, copy, displayName, channelTitle, serverIdOf, sortedChannels, dmList, can, P, sendMessage, openExternal, isUnread, openDM } from './api';
 import { Modal, Avatar, ServerIcon, ChannelIcon, GroupIcon, Seg, Switch, ToggleRow } from './ui';
 import { Icon } from './icons';
 import { ProfileModal, CustomStatusModal, ActivityModal } from './profile';
@@ -719,7 +719,7 @@ function ServerProfileModal({ serverId }) {
         <label>Server-Avatar</label>
         <div class="row">
           <Avatar uid={S.me.id} size={56} src={fileUrl(avatar || S.me.avatar)} />
-          <button class="btn ghost sm" onClick={async () => { const r = await pickAndUpload('image/*'); if (r) setAvatar(r.url); }}>Hochladen</button>
+          <button class="btn ghost sm" onClick={async () => { const r = await pickAvatar(); if (r) setAvatar(r.url); }}>Hochladen</button>
           {avatar && <button class="btn link sm" onClick={() => setAvatar('')}>Entfernen</button>}
         </div>
       </div>

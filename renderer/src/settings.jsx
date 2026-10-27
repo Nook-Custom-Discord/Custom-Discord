@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, confirmDialog, promptDialog, toast } from './store';
-import { act, rpc, pickAndUpload, pickFile, upload, fileUrl, logout, displayName, isElectron, copy } from './api';
+import { act, rpc, pickAndUpload, pickAvatar, pickFile, upload, fileUrl, logout, displayName, isElectron, copy, AVATAR_VIDEO_MAX_S } from './api';
 import { Avatar, Switch, ToggleRow, Seg, Video, Spinner } from './ui';
 import { Icon } from './icons';
 import { ProfileCard } from './profile';
@@ -165,7 +165,7 @@ function Profile() {
     setBusy(false);
   };
   const up = async (k) => {
-    const r = await pickAndUpload('image/*');
+    const r = k === 'avatar' ? await pickAvatar() : await pickAndUpload('image/*');
     if (r) set(k, r.url);
   };
   return (
@@ -194,7 +194,7 @@ function Profile() {
                 <input class="input" value={p.pronouns} maxLength={40} placeholder="z. B. er/ihm, sie/ihr" onInput={(e) => set('pronouns', e.target.value)} />
               </div>
               <div class="field">
-                <label>Avatar (Bild oder GIF)</label>
+                <label>Avatar (Bild, GIF oder Video bis {AVATAR_VIDEO_MAX_S} s)</label>
                 <div class="row">
                   <button class="btn sm" onClick={() => up('avatar')}>Avatar ändern</button>
                   {p.avatar && <button class="btn link sm" onClick={() => set('avatar', '')}>Entfernen</button>}

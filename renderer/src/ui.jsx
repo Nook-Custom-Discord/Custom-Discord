@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useLayoutEffect } from 'preact/hooks';
 import { S, update, closeModal } from './store';
-import { avatarOf, displayName, fileUrl } from './api';
+import { avatarOf, displayName, fileUrl, isVideoUrl } from './api';
 import { Icon } from './icons';
 import { Deco, nameClasses, nameVars } from './cosmetics';
 
@@ -21,7 +21,9 @@ export function Avatar({ uid, size = 40, status = false, serverId, speaking = fa
   const decoration = deco ? (decoOverride !== undefined ? decoOverride : u?.decoration) || undefined : undefined;
   return (
     <div class={`avatar ${round ? 'round' : ''} ${speaking ? 'speaking' : ''}`} style={{ width: size, height: size, '--deco': u?.accent || colorFor(uid) }}>
-      {url ? (
+      {url && isVideoUrl(url) ? (
+        <VideoAvatar src={url} live={size >= 64} />
+      ) : url ? (
         <img class="img" src={url} alt="" draggable={false} loading="lazy" />
       ) : (
         <div class="img" style={{ background: u?.accent || colorFor(uid), fontSize: size * 0.4 }}>
@@ -32,6 +34,34 @@ export function Avatar({ uid, size = 40, status = false, serverId, speaking = fa
       {st && <div class={`status status-${st}`} title={STATUS_LABEL[st]} />}
     </div>
   );
+}
+
+// Video als Profilbild: in großen Ansichten läuft es immer, in Listen und im Chat nur,
+// wenn die Maus über der Zeile ist (spart Leistung, wie bei animierten Avataren üblich)
+const HOVER_ROW = '.mgroup, .member, .dm-item, .frow, .me-chip, .dock, .list-row, .pick-row, .gset-member, .opt, .bundle';
+function VideoAvatar({ src, live }) {
+  const ref = useRef();
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    const play = () => v.play().catch(() => {});
+    const stop = () => {
+      v.pause();
+      v.currentTime = 0;
+    };
+    if (live) {
+      play();
+      return;
+    }
+    const row = v.closest(HOVER_ROW) || v.parentElement;
+    row.addEventListener('mouseenter', play);
+    row.addEventListener('mouseleave', stop);
+    return () => {
+      row.removeEventListener('mouseenter', play);
+      row.removeEventListener('mouseleave', stop);
+    };
+  }, [src, live]);
+  return <video ref={ref} class="img" src={src} muted loop playsInline preload={live ? 'auto' : 'metadata'} autoplay={live} disablePictureInPicture />;
 }
 
 export function StatusDot({ status, size = 10 }) {

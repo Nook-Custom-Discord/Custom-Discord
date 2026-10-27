@@ -122,11 +122,12 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 - Sprachaktivierung mit Empfindlichkeit oder Push-to-Talk, Rauschunterdrückung, Echounterdrückung
 - Studio-Sprachqualität (Opus 128 kbit/s)
 - Kamera bis 1080p60, Bildschirm/Fenster teilen bis **4K 120 FPS** mit Systemton, Fokus- & Vollbildansicht
+- Live-Anzeige der empfangenen Stream-Qualität (Auflösung, FPS, Datenrate), Bitrate wird automatisch auf mehrere Zuschauer verteilt, Codec passend zum Inhalt (H264 für Spiele, VP9 für Text)
 - Soundboard mit eigenen Sounds, Text-Chat im Sprachkanal, Bühnen-Kanäle mit „Sprechen anfragen"
 - Moderation: Server-Mute/-Taub, Verschieben, Trennen
 
 **Profil & Anpassung (alles gratis)**
-- Animierte Avatare & Banner (GIF), Profil-Farbthemen, über 60 Avatar-Dekorationen (davon 17 mehrschichtig animiert wie Portal, Schwarzes Loch, Engelsflügel, Cyber-HUD), animierte Profilrahmen, Profil-Effekte, Namens-Stile mit Schrift & Farbverlauf
+- Animierte Avatare & Banner (GIF), **Video-Profilbilder** (MP4/WebM bis 15 s – laufen im Profil, in Listen beim Drüberfahren), Profil-Farbthemen, über 60 Avatar-Dekorationen (davon 17 mehrschichtig animiert wie Portal, Schwarzes Loch, Engelsflügel, Cyber-HUD), animierte Profilrahmen, Profil-Effekte, Namens-Stile mit Schrift & Farbverlauf
 - 11 Pakete mit Deko, Profil-Effekt, Namensschild und Rahmen – alles auf einen Klick ausrüstbar, komplett generiert (keine Bilddateien):
   - Netze (Blutnetz, Frostnetz, Giftnetz, Schattennetz, Goldnetz): glänzende organische Netze, Tropfen laufen herab
   - Dornen (Rosendornen, Dornröschen, Schattendornen): Ranken wachsen herein, Rosen erblühen, Blütenblätter fallen

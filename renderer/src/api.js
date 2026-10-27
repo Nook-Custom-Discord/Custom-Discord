@@ -137,6 +137,52 @@ export async function pickAndUpload(accept = 'image/*') {
   }
 }
 
+// Profilbild: Bild, GIF oder ein kurzes Video (Länge und Größe werden vor dem Hochladen geprüft)
+export const AVATAR_VIDEO_MAX_S = 15;
+const AVATAR_VIDEO_MAX_MB = 25;
+export async function pickAvatar() {
+  const file = await pickFile('image/*,video/mp4,video/webm,video/quicktime');
+  if (!file) return null;
+  if (file.type.startsWith('video/') || isVideoUrl(file.name)) {
+    if (file.size > AVATAR_VIDEO_MAX_MB * 1048576) {
+      toast(`Video zu groß (max. ${AVATAR_VIDEO_MAX_MB} MB)`, 'error');
+      return null;
+    }
+    const dur = await videoDuration(file);
+    if (dur == null) {
+      toast('Dieses Video kann nicht abgespielt werden – nimm am besten MP4 oder WebM', 'error');
+      return null;
+    }
+    if (dur > AVATAR_VIDEO_MAX_S + 0.5) {
+      toast(`Video zu lang (${Math.round(dur)} s) – höchstens ${AVATAR_VIDEO_MAX_S} Sekunden`, 'error');
+      return null;
+    }
+    toast('Video wird hochgeladen …');
+  }
+  try {
+    return await upload(file);
+  } catch (e) {
+    toast(e.message, 'error');
+    return null;
+  }
+}
+
+function videoDuration(file) {
+  return new Promise((resolve) => {
+    const v = document.createElement('video');
+    const url = URL.createObjectURL(file);
+    const done = (d) => {
+      URL.revokeObjectURL(url);
+      resolve(d);
+    };
+    v.preload = 'metadata';
+    v.muted = true;
+    v.onloadedmetadata = () => done(Number.isFinite(v.duration) ? v.duration : null);
+    v.onerror = () => done(null);
+    v.src = url;
+  });
+}
+
 export function pickFile(accept = '*/*', multiple = false) {
   return new Promise((resolve) => {
     const inp = document.createElement('input');
@@ -391,7 +437,8 @@ function onMessage(m) {
   if (shouldNotify) {
     sfx(mentioned ? 'mention' : 'message');
     const where = ch.type === 'dm' ? '' : ch.type === 'group' ? ` (${groupName(ch)})` : ` (#${ch.name}, ${S.servers[serverIdOf(ch)]?.name || ''})`;
-    notify(displayName(m.authorId, serverIdOf(ch)) + where, plainText(m) || 'Anhang', { tag: 'ch:' + ch.id, icon: S.users[m.authorId]?.avatar });
+    const av = S.users[m.authorId]?.avatar;
+    notify(displayName(m.authorId, serverIdOf(ch)) + where, plainText(m) || 'Anhang', { tag: 'ch:' + ch.id, icon: isVideoUrl(av) ? undefined : av });
     if (prefs.flash) window.nook?.flash();
   }
   updateBadge();
@@ -567,6 +614,11 @@ export function displayName(uid, serverId) {
   const u = S.users[uid];
   const nick = serverId && S.servers[serverId]?.members[uid]?.nick;
   return nick || u?.displayName || u?.username || 'Unbekannt';
+}
+
+// Video-Avatare (kurze Clips) erkennt man an der Dateiendung
+export function isVideoUrl(u) {
+  return /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u || '');
 }
 
 export function avatarOf(uid, serverId) {

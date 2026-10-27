@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, openModal, closeModal, openPopout, openMenu, toast } from './store';
-import { act, rpc, displayName, channelTitle, serverIdOf, voiceMembers, can, P, navigate, dismissCall, avatarOf, openDM, isElectron } from './api';
+import { act, rpc, displayName, channelTitle, serverIdOf, voiceMembers, can, P, navigate, dismissCall, avatarOf, isVideoUrl, openDM, isElectron } from './api';
 import { V, QUALITY } from './voice';
 import { Avatar, Modal, Seg, Video, Name, Spinner, ServerIcon } from './ui';
 import { Icon } from './icons';
@@ -86,6 +86,12 @@ function TileTools({ children, hasVideo }) {
 }
 
 // ---------- Kachel ----------
+// unscharfer Kachel-Hintergrund aus dem Avatar; Video-Avatare taugen nicht als Hintergrundbild -> Akzentfarbe
+function tileBg(uid, serverId) {
+  const av = avatarOf(uid, serverId);
+  return av && !isVideoUrl(av) ? { backgroundImage: `url(${av})` } : { backgroundColor: S.users[uid]?.accent || 'var(--panel3)' };
+}
+
 function Tile({ uid, kind = 'user', serverId, small, onClick }) {
   const vs = S.voice[uid] || {};
   const me = uid === S.me.id;
@@ -94,13 +100,16 @@ function Tile({ uid, kind = 'user', serverId, small, onClick }) {
   if (kind === 'screen') {
     const stream = me ? V.screenStream : V.remote[uid]?.screen;
     const watching = me || V.watching.has(uid);
+    // echte Werte beim Zuschauer; Farbe zeigt, ob die FPS das Ziel des Streamers erreichen
+    const st = !me && watching && V.screenStats[uid]?.h ? V.screenStats[uid] : null;
+    const health = st && vs.screenInfo?.fps ? (st.fps >= vs.screenInfo.fps * 0.8 ? 'good' : st.fps >= vs.screenInfo.fps * 0.45 ? 'ok' : 'bad') : '';
     return (
       <div class="tile" data-uid={uid} data-kind="screen" onClick={onClick} onContextMenu={(e) => voiceUserMenu(e, uid, serverId)} onDblClick={(e) => toggleFullscreen(e.currentTarget)}>
         {watching && stream ? (
           <Video stream={stream} />
         ) : (
           <>
-            <div class="tbg" style={{ backgroundImage: avatarOf(uid, serverId) ? `url(${avatarOf(uid, serverId)})` : undefined, background: avatarOf(uid, serverId) ? undefined : S.users[uid]?.accent }} />
+            <div class="tbg" style={tileBg(uid, serverId)} />
             <div class="watch">
               <span class="live">LIVE</span>
               <b>{displayName(uid, serverId)} streamt</b>
@@ -118,7 +127,13 @@ function Tile({ uid, kind = 'user', serverId, small, onClick }) {
         )}
         <div class="tname">
           <span class="live">LIVE</span> {displayName(uid, serverId)}
-          {vs.screenInfo && watching && <span style={{ opacity: 0.7, fontWeight: 600 }}>· {vs.screenInfo.width ? `${vs.screenInfo.height}p` : ''}{vs.screenInfo.fps}</span>}
+          {st ? (
+            <span class={`sstat ${health}`} data-tip="Empfangene Qualität">
+              {st.h}p · {st.fps} FPS · {(st.kbps / 1000).toFixed(1)} Mbit/s
+            </span>
+          ) : (
+            vs.screenInfo && watching && <span style={{ opacity: 0.7, fontWeight: 600 }}>· {vs.screenInfo.width ? `${vs.screenInfo.height}p` : ''}{vs.screenInfo.fps}</span>
+          )}
         </div>
         <TileTools hasVideo={watching && !!stream}>
           {!me && watching && vs.screenInfo?.audio && (
@@ -143,7 +158,7 @@ function Tile({ uid, kind = 'user', serverId, small, onClick }) {
         <Video stream={cam} mirror={me} cover={!small} />
       ) : (
         <>
-          <div class="tbg" style={{ backgroundImage: avatarOf(uid, serverId) ? `url(${avatarOf(uid, serverId)})` : undefined, backgroundColor: S.users[uid]?.accent || 'var(--panel3)' }} />
+          <div class="tbg" style={tileBg(uid, serverId)} />
           <div class="tav">
             <Avatar uid={uid} size={small ? 44 : 84} serverId={serverId} speaking={speaking} round />
           </div>

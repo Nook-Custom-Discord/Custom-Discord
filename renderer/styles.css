@@ -6069,3 +6069,35 @@ svg.dfx-wing.r {
 .bundle-item .art-p {
   display: none;
 }
+/* Video-Avatare füllen die Form wie Bilder */
+video.img {
+  object-fit: cover;
+  background: #000;
+}
+/* Live-Qualität eines angesehenen Streams */
+.sstat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 650;
+  font-size: 12px;
+  opacity: 0.9;
+}
+.sstat::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.sstat.good::before {
+  background: var(--ok);
+  box-shadow: 0 0 6px var(--ok);
+}
+.sstat.ok::before {
+  background: var(--warn);
+}
+.sstat.bad::before {
+  background: var(--danger);
+  animation: dpulse 1s infinite;
+}
