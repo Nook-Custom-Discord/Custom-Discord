@@ -128,10 +128,11 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 
 **Profil & Anpassung (alles gratis)**
 - Animierte Avatare & Banner (GIF), **Video-Profilbilder** (MP4/WebM bis 15 s – laufen im Profil, in Listen beim Drüberfahren), Profil-Farbthemen, über 60 Avatar-Dekorationen (davon 17 mehrschichtig animiert wie Portal, Schwarzes Loch, Engelsflügel, Cyber-HUD), animierte Profilrahmen, Profil-Effekte, Namens-Stile mit Schrift & Farbverlauf
-- 11 Pakete mit Deko, Profil-Effekt, Namensschild und Rahmen – alles auf einen Klick ausrüstbar, komplett generiert (keine Bilddateien):
+- 17 Pakete mit Deko, Profil-Effekt, Namensschild und Rahmen – alles auf einen Klick ausrüstbar, komplett generiert (keine Bilddateien):
   - Netze (Blutnetz, Frostnetz, Giftnetz, Schattennetz, Goldnetz): glänzende organische Netze, Tropfen laufen herab
   - Dornen (Rosendornen, Dornröschen, Schattendornen): Ranken wachsen herein, Rosen erblühen, Blütenblätter fallen
   - Kristalle (Amethyst, Eiskristall, Rubin): facettierte Splitter, die aufblitzen und funkeln
+  - Anime (Sakura-Sturm, Fuchsfeuer, Shinobi, Magical Girl, Manga-Action, Katana): kreisende Kirschblüten, flackerndes Fuchsfeuer mit Fuchsohren, wirbelnde Shuriken, Schleife mit funkelnden Sternen, Manga-Speedlines mit „!!"-Blase, gekreuzte Katanas mit Klingenglanz – eigene Motive, keine Serienfiguren
 - Pro-Server-Profil (Nickname, Avatar, Banner, Bio), Pronomen, Bio mit Markdown
 - Status (Online/Abwesend/Bitte nicht stören/Unsichtbar), eigener Status mit Emoji & Ablaufzeit, Aktivität („Spielt …")
 - App-Themes (Tinte, Mitternacht, Dämmerung, Wald, Papier) mit kreisförmigem Überblenden, freie Akzentfarbe, Bubble- oder Kompakt-Layout, Schriftgröße
