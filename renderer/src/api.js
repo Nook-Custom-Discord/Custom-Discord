@@ -233,7 +233,7 @@ function onEvent(type, d) {
       if (d.type) S.rel[d.userId] = d.type;
       else delete S.rel[d.userId];
       if (d.type === 'incoming' && prev !== 'incoming') {
-        sfx('message');
+        sfx('friend');
         notify('Freundschaftsanfrage', `${displayName(d.userId)} möchte mit dir befreundet sein`, { tag: 'friends' });
       }
       if (d.type === 'friend' && prev === 'outgoing') toast(`${displayName(d.userId)} hat deine Anfrage angenommen`, 'success');
@@ -389,7 +389,7 @@ function onMessage(m) {
   const level = notifyLevel(ch);
   const shouldNotify = !viewing && !m.silent && S.me.status !== 'dnd' && (level === 'all' || (level === 'mentions' && mentioned));
   if (shouldNotify) {
-    sfx('message');
+    sfx(mentioned ? 'mention' : 'message');
     const where = ch.type === 'dm' ? '' : ch.type === 'group' ? ` (${groupName(ch)})` : ` (#${ch.name}, ${S.servers[serverIdOf(ch)]?.name || ''})`;
     notify(displayName(m.authorId, serverIdOf(ch)) + where, plainText(m) || 'Anhang', { tag: 'ch:' + ch.id, icon: S.users[m.authorId]?.avatar });
     if (prefs.flash) window.nook?.flash();
@@ -514,6 +514,7 @@ export async function sendMessage(chId, payload) {
   const box = S.messages[chId];
   const pending = { id: 'zzzz' + nonce, nonce, pending: true, channelId: chId, authorId: S.me.id, type: 'default', content: payload.content || '', attachments: payload.attachments || [], replyTo: payload.replyTo, reactions: {}, createdAt: Date.now(), poll: payload.poll ? { ...payload.poll, options: payload.poll.options.map((t, i) => ({ id: 'p' + i, text: t.text || t })), votes: {}, endsAt: Date.now() + 3600e3 } : null };
   if (box) box.list.push(pending);
+  sfx('send');
   update();
   try {
     await rpc('sendMessage', { channelId: chId, nonce, ...payload });

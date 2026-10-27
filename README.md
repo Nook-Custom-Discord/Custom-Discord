@@ -129,7 +129,9 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 - Animierte Avatare & Banner (GIF), Profil-Farbthemen, über 60 Avatar-Dekorationen (davon 17 mehrschichtig animiert wie Portal, Schwarzes Loch, Engelsflügel, Cyber-HUD), animierte Profilrahmen, Profil-Effekte, Namens-Stile mit Schrift & Farbverlauf
 - Pro-Server-Profil (Nickname, Avatar, Banner, Bio), Pronomen, Bio mit Markdown
 - Status (Online/Abwesend/Bitte nicht stören/Unsichtbar), eigener Status mit Emoji & Ablaufzeit, Aktivität („Spielt …")
-- App-Themes (Tinte, Mitternacht, Dämmerung, Wald, Papier), freie Akzentfarbe, Bubble- oder Kompakt-Layout, Schriftgröße
+- App-Themes (Tinte, Mitternacht, Dämmerung, Wald, Papier) mit kreisförmigem Überblenden, freie Akzentfarbe, Bubble- oder Kompakt-Layout, Schriftgröße
+- 8 Sound-Pakete (Nook, Kristall, Blubber, Retro, Lo-Fi, Sci-Fi, Marimba, Dezent), eigene Sound-Dateien pro Ereignis (auch als Klingelton), jedes Ereignis einzeln an/aus
+- Animierte Oberfläche: Klick-Wellen, Licht-Effekt auf Karten, gestaffelt einblendende Listen, weiche Kanal- und Seitenwechsel (abschaltbar über „Animationen reduzieren")
 
 **Verwaltung**
 - Rollen mit Farben, 22 Berechtigungen, Hoisting, Reihenfolge; Kick, Bann (mit Grund & Nachrichten löschen)

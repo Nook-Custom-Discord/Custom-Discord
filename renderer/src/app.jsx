@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, useStore, openModal, toast } from './store';
 import { auth, connect, normServer, isElectron, navigate, channelTitle, serverIdOf, can, P, rpc, act, sortedChannels, displayName, voiceMembers, openDM, dmList } from './api';
 import { V } from './voice';
@@ -15,6 +15,7 @@ import { EmojiPicker } from './picker';
 import { ContextMenu, Toasts, TooltipLayer, Positioned, Avatar, ChannelIcon, GroupIcon, Spinner, fmtDateTime } from './ui';
 import { Icon, LogoMark } from './icons';
 import { Md } from './message';
+import { initFx, fadeIn } from './fx';
 
 // ---------- Login ----------
 function Login() {
@@ -261,10 +262,13 @@ function ForumView({ ch }) {
 function Content() {
   const { serverId, channelId } = S.view;
   const ch = channelId && S.channels[channelId];
+  // beim Kanalwechsel gleitet der Inhalt (nicht der Kopf) sanft herein
+  const ref = useRef();
+  useEffect(() => fadeIn(ref.current?.querySelector('.chat-wrap') || ref.current), [serverId, channelId]);
   if (!ch) {
-    if (serverId === '@me') return <div class="panel content"><FriendsView /></div>;
+    if (serverId === '@me') return <div class="panel content" ref={ref}><FriendsView /></div>;
     return (
-      <div class="panel content">
+      <div class="panel content" ref={ref}>
         <div class="empty" style={{ margin: 'auto' }}>
           <div class="art">🧭</div>
           <div>Wähle links einen Kanal.</div>
@@ -277,7 +281,7 @@ function Content() {
   const isDM = ch.type === 'dm' || ch.type === 'group';
   const callActive = isDM && (V.channelId === ch.id || voiceMembers(ch.id).length > 0);
   return (
-    <div class="panel content">
+    <div class="panel content" ref={ref}>
       <ChannelHeader ch={ch} />
       <div class="chat-wrap">
         {isVoice ? (
@@ -466,4 +470,5 @@ window.nook?.on?.('hotkey', (k) => {
   if (k === 'deafen') V.toggleDeafen();
 });
 if (S.token && S.serverUrl) connect();
+initFx();
 render(<App />, document.getElementById('root'));

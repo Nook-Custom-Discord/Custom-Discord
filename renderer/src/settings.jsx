@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, confirmDialog, promptDialog, toast } from './store';
-import { act, rpc, pickAndUpload, fileUrl, logout, displayName, isElectron, copy } from './api';
+import { act, rpc, pickAndUpload, pickFile, upload, fileUrl, logout, displayName, isElectron, copy } from './api';
 import { Avatar, Switch, ToggleRow, Seg, Video, Spinner } from './ui';
 import { Icon } from './icons';
 import { ProfileCard } from './profile';
 import { DECORATIONS, EFFECTS, NAMEPLATES, NAME_FONTS, NAME_EFFECTS, FRAMES, Frame, EffectLayer } from './cosmetics';
 import { NameText } from './ui';
 import { V, QUALITY } from './voice';
-import { sfx } from './sounds';
+import { previewSound, PACKS, SOUND_EVENTS } from './sounds';
 import { clearMarkdownCache } from './markdown';
+import { fadeIn, withTransition } from './fx';
 
 export const THEMES = [
   ['ink', 'Tinte', ['#0b0d12', '#151922', '#1e2430']],
@@ -407,7 +408,7 @@ function Appearance() {
       <Section title="Farbschema">
         <div class="row" style={{ flexWrap: 'wrap' }}>
           {THEMES.map(([id, name, c]) => (
-            <button class={`theme-opt ${prefs.theme === id ? 'on' : ''}`} onClick={() => setPref('theme', id)}>
+            <button class={`theme-opt ${prefs.theme === id ? 'on' : ''}`} onClick={(e) => withTransition(() => setPref('theme', id), e)}>
               <div class="tp" style={{ background: c[0] }}>
                 <i style={{ background: c[1], width: 26 }} />
                 <i style={{ background: c[1], flex: 1, display: 'flex', alignItems: 'flex-end', padding: 4 }}>
@@ -423,7 +424,7 @@ function Appearance() {
         <div class="row">
           <div class="swatches">
             {ACCENTS.map((c) => (
-              <button class={`swatch ${prefs.accent === c ? 'on' : ''}`} style={{ background: c }} onClick={() => setPref('accent', c)} />
+              <button class={`swatch ${prefs.accent === c ? 'on' : ''}`} style={{ background: c }} onClick={(e) => withTransition(() => setPref('accent', c), e)} />
             ))}
           </div>
           <input type="color" value={prefs.accent} onInput={(e) => setPref('accent', e.target.value)} data-tip="Eigene Farbe" />
@@ -645,16 +646,144 @@ function Voice() {
   );
 }
 
+// ---------- Sounds ----------
+const MAX_SOUND_BYTES = 3 * 1024 * 1024;
+
+// kleine Equalizer-Balken, die tanzen, solange ein Sound läuft
+function Eq({ on }) {
+  return (
+    <span class={`eq ${on ? 'on' : ''}`}>
+      <i />
+      <i />
+      <i />
+      <i />
+    </span>
+  );
+}
+
+function Sounds() {
+  const [playing, setPlaying] = useState(null);
+  const timer = useRef();
+  const flash = (key) => {
+    setPlaying(key);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setPlaying(null), 1100);
+  };
+  const setEvent = (k, on) => setPref('soundEvents', { ...prefs.soundEvents, [k]: on });
+  const setCustom = (k, v) => {
+    const c = { ...prefs.customSounds };
+    if (v) c[k] = v;
+    else delete c[k];
+    setPref('customSounds', c);
+  };
+  const pickCustom = async (k) => {
+    const file = await pickFile('audio/*');
+    if (!file) return;
+    if (file.size > MAX_SOUND_BYTES) return toast('Sound zu groß (max. 3 MB) – kurze Clips klingen eh am besten', 'error');
+    try {
+      const r = await upload(file);
+      setCustom(k, { url: r.url, name: r.name || file.name });
+      flash(k);
+      setTimeout(() => previewSound(k), 50);
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  };
+  const pack = PACKS.find((p) => p.id === prefs.soundPack) || PACKS[0];
+  return (
+    <>
+      <h1>Sounds</h1>
+      <div class="hint" style={{ marginTop: -14, marginBottom: 18 }}>
+        🎵 Wähle ein Sound-Paket für die ganze App oder lade für einzelne Ereignisse deine eigenen Töne hoch (MP3, WAV, OGG …).
+      </div>
+      <div class="card">
+        <ToggleRow title="Sounds aktiviert" desc="Nachrichten-, Anruf- und Sprachkanal-Töne" on={prefs.sounds} onChange={(v) => setPref('sounds', v)} />
+        <div class="field" style={{ marginTop: 14, marginBottom: 0 }}>
+          <label>Lautstärke: {Math.round(prefs.soundVolume * 100)}%</label>
+          <input type="range" min="0" max="1" step="0.05" value={prefs.soundVolume} onInput={(e) => setPref('soundVolume', +e.target.value)} onChange={() => previewSound('message')} />
+        </div>
+      </div>
+      <h3>Sound-Paket</h3>
+      <div class="spacks">
+        {PACKS.map((p) => (
+          <button
+            class={`spack ${prefs.soundPack === p.id || (!prefs.soundPack && p.id === 'nook') ? 'on' : ''} ${playing === 'pack:' + p.id ? 'playing' : ''}`}
+            onClick={() => {
+              setPref('soundPack', p.id);
+              previewSound('mention', p.id);
+              flash('pack:' + p.id);
+            }}
+          >
+            <span class="spack-emoji">{p.emoji}</span>
+            <span class="grow" style={{ minWidth: 0 }}>
+              <b>{p.name}</b>
+              <span class="spack-desc">{p.desc}</span>
+            </span>
+            <Eq on={playing === 'pack:' + p.id} />
+          </button>
+        ))}
+      </div>
+      <h3>Ereignisse</h3>
+      <div class="hint" style={{ marginTop: -6, marginBottom: 10 }}>
+        Mit ▶ anhören, mit ⬆ einen eigenen Sound hochladen. Eigene Sounds liegen auf eurem Server und gelten auf diesem Gerät.
+      </div>
+      <div class="sevents">
+        {SOUND_EVENTS.map(([k, label]) => {
+          const custom = prefs.customSounds?.[k];
+          const on = prefs.soundEvents?.[k] !== false;
+          return (
+            <div class={`sev ${on ? '' : 'off'} ${playing === k ? 'playing' : ''}`}>
+              <button class="ibtn sev-play" data-tip="Anhören" onClick={() => { previewSound(k); flash(k); }}>
+                {playing === k ? <Eq on /> : <Icon name="play" size={18} />}
+              </button>
+              <div class="grow" style={{ minWidth: 0 }}>
+                <div class="sev-name">{label}</div>
+                <div class="sev-src ellipsis">
+                  {custom ? (
+                    <span class="sev-custom">
+                      🎧 {custom.name}
+                      <button data-tip="Eigenen Sound entfernen" onClick={() => setCustom(k, null)}>
+                        <Icon name="x" size={12} />
+                      </button>
+                    </span>
+                  ) : (
+                    <span>
+                      {pack.emoji} {pack.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button class="ibtn sm" data-tip="Eigenen Sound hochladen" onClick={() => pickCustom(k)}>
+                <Icon name="upload" />
+              </button>
+              <Switch on={on} onChange={(v) => setEvent(k, v)} />
+            </div>
+          );
+        })}
+      </div>
+      <div class="row" style={{ marginTop: 14 }}>
+        <button class="btn ghost sm" disabled={!Object.keys(prefs.customSounds || {}).length} onClick={() => setPref('customSounds', {})}>
+          Alle eigenen Sounds entfernen
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ---------- Benachrichtigungen ----------
 function Notifications() {
   return (
     <>
       <h1>Benachrichtigungen</h1>
       <ToggleRow title="Desktop-Benachrichtigungen" desc="Für DMs und Erwähnungen, wenn das Fenster nicht aktiv ist" on={prefs.desktopNotifs} onChange={(v) => setPref('desktopNotifs', v)} />
-      <ToggleRow title="Sounds" desc="Nachrichten-, Beitritts- und Anruftöne" on={prefs.sounds} onChange={(v) => setPref('sounds', v)} />
-      <div class="field" style={{ marginTop: 14 }}>
-        <label>Sound-Lautstärke: {Math.round(prefs.soundVolume * 100)}%</label>
-        <input type="range" min="0" max="1" step="0.05" value={prefs.soundVolume} onInput={(e) => setPref('soundVolume', +e.target.value)} onChange={() => sfx('message')} />
+      <div class="toggle-row">
+        <div class="grow">
+          <div class="t">Sounds</div>
+          <div class="d">Sound-Pakete, eigene Töne und Lautstärke findest du unter „Sounds".</div>
+        </div>
+        <button class="btn ghost sm" onClick={() => { S.settings = { tab: 'sounds' }; update(); }}>
+          Sounds anpassen
+        </button>
       </div>
       <ToggleRow title="Taskleiste blinken lassen" on={prefs.flash} onChange={(v) => setPref('flash', v)} />
       <div class="field" style={{ marginTop: 14 }}>
@@ -815,11 +944,16 @@ export function SettingsView() {
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
   }, []);
+  const mainRef = useRef();
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+    fadeIn(mainRef.current);
+  }, [tab]);
   const tabs = [
     ['Benutzer', [['account', 'Mein Konto'], ['profile', 'Profil'], ['privacy', 'Datenschutz']]],
-    ['App', [['appearance', 'Darstellung'], ['voice', 'Sprache & Video'], ['notifications', 'Benachrichtigungen'], ['keybinds', 'Tastenkürzel'], isElectron && ['host', 'Server hosten'], isElectron && ['app', 'App & Autostart'], ['about', 'Über Nook']]],
+    ['App', [['appearance', 'Darstellung'], ['voice', 'Sprache & Video'], ['notifications', 'Benachrichtigungen'], ['sounds', 'Sounds'], ['keybinds', 'Tastenkürzel'], isElectron && ['host', 'Server hosten'], isElectron && ['app', 'App & Autostart'], ['about', 'Über Nook']]],
   ];
-  const C = { account: Account, profile: Profile, privacy: Privacy, appearance: Appearance, voice: Voice, notifications: Notifications, keybinds: Keybinds, host: Host, app: AppSettings, about: About }[tab] || Account;
+  const C = { account: Account, profile: Profile, privacy: Privacy, appearance: Appearance, voice: Voice, notifications: Notifications, sounds: Sounds, keybinds: Keybinds, host: Host, app: AppSettings, about: About }[tab] || Account;
   return (
     <div class="settings">
       <nav>
@@ -840,7 +974,7 @@ export function SettingsView() {
           </button>
         </div>
       </nav>
-      <main>
+      <main ref={mainRef}>
         <C />
       </main>
       <div class="close">

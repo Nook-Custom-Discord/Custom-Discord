@@ -5352,7 +5352,7 @@ svg.dfx-wing.r {
   background: var(--panel2);
   border: 1px solid var(--line);
   transition: transform 0.15s, border-color 0.15s, background 0.15s;
-  animation: pop 0.35s ease-out both;
+  animation: pop 0.35s ease-out backwards;
 }
 .gs-act:nth-child(2) {
   animation-delay: 0.05s;
@@ -5553,4 +5553,290 @@ svg.dfx-wing.r {
 .popout .pcard.framed,
 .overlay .pcard.framed {
   animation: pcard-in 0.32s cubic-bezier(0.2, 1.25, 0.4, 1), frame-glow 3s ease-in-out 0.32s infinite;
+}
+
+/* =================== Sounds =================== */
+.spacks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.spack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  text-align: left;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  overflow: hidden;
+  transition: border-color 0.15s, transform 0.2s var(--spring), background 0.2s;
+}
+.spack:hover {
+  transform: translateY(-2px);
+  border-color: var(--line2);
+}
+.spack.on {
+  border-color: var(--accent);
+  background: linear-gradient(135deg, var(--accent-soft), var(--panel) 70%);
+}
+.spack b {
+  display: block;
+  font-size: 14.5px;
+}
+.spack-desc {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.spack-emoji {
+  font-size: 26px;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--bg2);
+  transition: transform 0.3s var(--spring);
+}
+.spack.on .spack-emoji {
+  background: var(--accent-soft);
+}
+.spack.playing .spack-emoji {
+  animation: spack-hop 0.6s var(--spring);
+}
+@keyframes spack-hop {
+  30% {
+    transform: translateY(-6px) scale(1.15) rotate(-8deg);
+  }
+  60% {
+    transform: translateY(0) scale(0.95) rotate(4deg);
+  }
+}
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+  flex: none;
+}
+.eq i {
+  width: 3px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0.35;
+  transition: opacity 0.2s;
+}
+.eq.on i {
+  opacity: 1;
+  animation: eq 0.55s ease-in-out infinite alternate;
+}
+.eq.on i:nth-child(2) {
+  animation-delay: -0.2s;
+}
+.eq.on i:nth-child(3) {
+  animation-delay: -0.4s;
+}
+.eq.on i:nth-child(4) {
+  animation-delay: -0.1s;
+}
+@keyframes eq {
+  from {
+    height: 3px;
+  }
+  to {
+    height: 16px;
+  }
+}
+.sevents {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.sev {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px 9px 10px;
+  border-bottom: 1px solid var(--line);
+  transition: background 0.15s, opacity 0.2s;
+}
+.sev:last-child {
+  border-bottom: 0;
+}
+.sev:hover {
+  background: var(--hover);
+}
+.sev.off {
+  opacity: 0.55;
+}
+.sev.playing {
+  background: var(--accent-soft);
+}
+.sev-play {
+  background: var(--bg2);
+  border-radius: 50%;
+}
+.sev-play:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.sev-name {
+  font-weight: 650;
+  font-size: 14px;
+}
+.sev-src {
+  font-size: 12px;
+  color: var(--muted);
+}
+.sev-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 4px 1px 8px;
+  border-radius: 99px;
+  background: var(--accent-soft);
+  color: var(--text2);
+  max-width: 100%;
+}
+.sev-custom button {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: var(--muted);
+}
+.sev-custom button:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* =================== Bewegung & Effekte =================== */
+/* Klick-Welle (wird von fx.js als eigenes Element über das Ziel gelegt) */
+.ripple-host {
+  position: fixed;
+  z-index: 500;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--text) 22%, transparent) 0%, transparent 60%);
+  transform: scale(0);
+  animation: ripple 0.6s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+@keyframes ripple {
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+/* Licht, das unter dem Mauszeiger über Karten wandert */
+.spack::after,
+.gs-act::after,
+.opt::after,
+.frow::after,
+.sev::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--accent) 14%, transparent), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.spot-on::after {
+  opacity: 1;
+}
+.gs-act,
+.frow {
+  position: relative;
+}
+/* Theme-Wechsel: neue Farben breiten sich kreisförmig vom Klickpunkt aus */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  animation: vt-reveal 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes vt-reveal {
+  from {
+    clip-path: circle(0 at var(--vtx, 50%) var(--vty, 50%));
+  }
+  to {
+    clip-path: circle(150vmax at var(--vtx, 50%) var(--vty, 50%));
+  }
+}
+/* Zähler-Badges ploppen auf */
+.badge {
+  animation: badge-pop 0.45s var(--spring);
+}
+@keyframes badge-pop {
+  from {
+    transform: scale(0);
+  }
+}
+/* Listen bauen sich beim ersten Anzeigen gestaffelt auf */
+.sb-scroll > .dm-item,
+.members .member,
+.sb-scroll .chan,
+.friends-body .frow {
+  animation: list-in 0.35s var(--ease) backwards;
+}
+.sb-scroll > :nth-child(2),
+.members .member:nth-child(2),
+.friends-body .frow:nth-child(2) {
+  animation-delay: 0.03s;
+}
+.sb-scroll > :nth-child(3),
+.members .member:nth-child(3),
+.friends-body .frow:nth-child(3) {
+  animation-delay: 0.06s;
+}
+.sb-scroll > :nth-child(4),
+.members .member:nth-child(4),
+.friends-body .frow:nth-child(4) {
+  animation-delay: 0.09s;
+}
+.sb-scroll > :nth-child(5),
+.members .member:nth-child(5),
+.friends-body .frow:nth-child(5) {
+  animation-delay: 0.12s;
+}
+.sb-scroll > :nth-child(n + 6),
+.members .member:nth-child(n + 6),
+.friends-body .frow:nth-child(n + 6) {
+  animation-delay: 0.15s;
+}
+@keyframes list-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+/* Reaktionen ploppen beim Erscheinen, Avatare im Chat reagieren auf Hover */
+.reaction {
+  animation: badge-pop 0.35s var(--spring);
+}
+.mgroup .gav .avatar {
+  transition: transform 0.25s var(--spring);
+}
+.mgroup .gav .avatar:hover {
+  transform: scale(1.08) rotate(-3deg);
 }
