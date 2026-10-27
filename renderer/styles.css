@@ -3853,6 +3853,11 @@ img.emoji {
 .wallpaper.thumb::after {
   opacity: calc(var(--wp-dim) * 0.25);
 }
+.lg-range {
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
 .lg-card {
   display: flex;
   align-items: center;
@@ -7123,12 +7128,13 @@ video.img {
   --active: rgba(255, 255, 255, 0.13);
   --rim: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
   --rim-strong: inset 0 1px 0 rgba(255, 255, 255, 0.32), inset 0 -1px 0 rgba(255, 255, 255, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  --mat-panel: color-mix(in srgb, var(--panel) 46%, transparent);
+  /* --glass-o: Regler „Durchsichtigkeit“ (1 = Standard, 0 = ganz klar, 2 = fast deckend) */
+  --mat-panel: color-mix(in srgb, var(--panel) min(100%, calc(46% * var(--glass-o, 1))), transparent);
   --mat-panel-fx: blur(26px) saturate(1.7);
-  --mat-raised: rgba(255, 255, 255, 0.055);
-  --mat-float: color-mix(in srgb, var(--panel2) 52%, transparent);
+  --mat-raised: rgb(255 255 255 / calc(0.055 * var(--glass-o, 1)));
+  --mat-float: color-mix(in srgb, var(--panel2) min(100%, calc(52% * var(--glass-o, 1))), transparent);
   --mat-float-fx: blur(20px) saturate(1.8);
-  --mat-field: color-mix(in srgb, var(--bg) 32%, transparent);
+  --mat-field: color-mix(in srgb, var(--bg) min(100%, calc(32% * var(--glass-o, 1))), transparent);
   --elev-1: 0 10px 30px -14px rgba(0, 0, 0, 0.5);
   --elev-2: 0 16px 40px -16px rgba(0, 0, 0, 0.55);
   --elev-3: 0 30px 80px -24px rgba(0, 0, 0, 0.65);
@@ -7138,12 +7144,12 @@ video.img {
 [data-glass='clear'] {
   --wp-dim: 0;
   --glass-line: rgba(255, 255, 255, 0.22);
-  --mat-panel: rgba(12, 14, 20, 0.2);
+  --mat-panel: rgb(12 14 20 / calc(0.2 * var(--glass-o, 1)));
   --mat-panel-fx: blur(8px) saturate(1.5);
-  --mat-raised: rgba(255, 255, 255, 0.07);
-  --mat-float: rgba(14, 16, 22, 0.24);
+  --mat-raised: rgb(255 255 255 / calc(0.07 * var(--glass-o, 1)));
+  --mat-float: rgb(14 16 22 / calc(0.24 * var(--glass-o, 1)));
   --mat-float-fx: blur(4px) saturate(1.6);
-  --mat-field: rgba(0, 0, 0, 0.22);
+  --mat-field: rgb(0 0 0 / calc(0.22 * var(--glass-o, 1)));
   --glass-hi: rgba(255, 255, 255, 0.16);
 }
 /* Helles Theme: weißes Glas über einem aufgehellten Hintergrund */
@@ -7156,10 +7162,10 @@ video.img {
   --active: rgba(255, 255, 255, 0.6);
   --rim: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
   --rim-strong: inset 0 1px 0 #fff, inset 0 -1px 0 rgba(255, 255, 255, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
-  --mat-panel: color-mix(in srgb, var(--panel) 50%, transparent);
-  --mat-raised: rgba(255, 255, 255, 0.4);
-  --mat-float: color-mix(in srgb, var(--panel) 58%, transparent);
-  --mat-field: rgba(255, 255, 255, 0.35);
+  --mat-panel: color-mix(in srgb, var(--panel) min(100%, calc(50% * var(--glass-o, 1))), transparent);
+  --mat-raised: rgb(255 255 255 / calc(0.4 * var(--glass-o, 1)));
+  --mat-float: color-mix(in srgb, var(--panel) min(100%, calc(58% * var(--glass-o, 1))), transparent);
+  --mat-field: rgb(255 255 255 / calc(0.35 * var(--glass-o, 1)));
   --elev-1: 0 10px 30px -14px rgba(40, 30, 10, 0.25);
   --elev-2: 0 16px 40px -16px rgba(40, 30, 10, 0.3);
   --elev-3: 0 30px 80px -24px rgba(40, 30, 10, 0.35);
@@ -7167,10 +7173,10 @@ video.img {
 }
 [data-theme='paper'][data-glass='clear'] {
   --wp-dim: 0.22;
-  --mat-panel: rgba(255, 255, 255, 0.24);
-  --mat-raised: rgba(255, 255, 255, 0.3);
-  --mat-float: rgba(255, 255, 255, 0.3);
-  --mat-field: rgba(255, 255, 255, 0.3);
+  --mat-panel: rgb(255 255 255 / calc(0.24 * var(--glass-o, 1)));
+  --mat-raised: rgb(255 255 255 / calc(0.3 * var(--glass-o, 1)));
+  --mat-float: rgb(255 255 255 / calc(0.3 * var(--glass-o, 1)));
+  --mat-field: rgb(255 255 255 / calc(0.3 * var(--glass-o, 1)));
 }
 [data-theme='paper'] .wallpaper {
   --wp-base: var(--bg);
@@ -7269,11 +7275,11 @@ video.img {
 
 /* Nachrichten */
 [data-glass] .bubble:not(.mention-me) {
-  background: color-mix(in srgb, var(--panel2) 58%, transparent);
+  background: color-mix(in srgb, var(--panel2) min(100%, calc(58% * var(--glass-o, 1))), transparent);
   border-color: var(--glass-line);
 }
 [data-theme='paper'][data-glass] .bubble:not(.mention-me) {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgb(255 255 255 / min(1, calc(0.55 * var(--glass-o, 1))));
 }
 [data-glass] .side-panel {
   background: rgba(0, 0, 0, 0.08);
@@ -7348,6 +7354,23 @@ video.img {
 [data-glass] .login-feats span {
   background: var(--mat-float);
   backdrop-filter: var(--mat-float-fx);
+}
+
+/* Durchsichtiges Fenster (Desktop-App): statt des Hintergrundbilds scheint der Desktop durch,
+   eine leichte Tönung in der Theme-Farbe hält alles lesbar */
+html[data-winglass],
+html[data-winglass] body,
+[data-winglass] .app,
+[data-winglass] .login {
+  background: transparent;
+}
+[data-winglass] .wallpaper:not(.thumb) {
+  background: color-mix(in srgb, var(--bg) min(100%, calc(30% * var(--glass-o, 1))), transparent);
+}
+[data-winglass] .wallpaper:not(.thumb) i,
+[data-winglass] .wallpaper:not(.thumb)::before,
+[data-winglass] .wallpaper:not(.thumb)::after {
+  display: none;
 }
 
 /* Klar: Schrift bekommt einen leichten Schatten, damit sie auf jedem Hintergrund lesbar bleibt */

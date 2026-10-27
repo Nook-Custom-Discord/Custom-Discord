@@ -8,6 +8,8 @@ const PREF_DEFAULTS = {
   reduceMotion: false,
   glass: '', // Liquid Glass: '' = aus, 'tinted' = getönt, 'clear' = klar
   glassRefraction: true,
+  glassClarity: 50, // Durchsichtigkeit des Glases in % (50 = Standard)
+  windowGlass: false, // Fenster durchsichtig, Desktop scheint durch (nur Desktop-App)
   wallpaper: 'aurora',
   wallpaperUrl: '',
   wallpaperMotion: true,

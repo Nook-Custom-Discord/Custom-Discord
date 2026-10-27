@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('nook', {
   show: () => ipcRenderer.send('show'),
   openExternal: (url) => ipcRenderer.send('open-external', url),
   setTitleBar: (color, symbolColor) => ipcRenderer.send('titlebar', { color, symbolColor }),
+  setTransparent: (on) => ipcRenderer.send('set-transparent', !!on),
   isFocused: () => ipcRenderer.invoke('is-focused'),
   idleTime: () => ipcRenderer.invoke('idle-time'),
   notify: (opts) => ipcRenderer.send('notify', opts),

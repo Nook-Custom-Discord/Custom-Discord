@@ -10,7 +10,7 @@ import { V, QUALITY } from './voice';
 import { previewSound, PACKS, SOUND_EVENTS } from './sounds';
 import { clearMarkdownCache } from './markdown';
 import { fadeIn, withTransition } from './fx';
-import { setGlass, refractionSupported } from './glass';
+import { setGlass, refractionSupported, windowGlassSupported } from './glass';
 
 export const THEMES = [
   ['ink', 'Tinte', ['#0b0d12', '#151922', '#1e2430']],
@@ -509,12 +509,26 @@ function Appearance() {
             </SegBox>
           </div>
         </div>
-        {prefs.glass &&
-          (refractionSupported() ? (
-            <ToggleRow title="Lichtbrechung an den Kanten" desc="Echte Verzerrung des Hintergrunds – braucht etwas mehr Grafikleistung" on={prefs.glassRefraction} onChange={(v) => setPref('glassRefraction', v)} />
-          ) : (
-            <div class="hint" style={{ marginTop: 10 }}>Dieser Browser kann nur den Weichzeichner. Die echte Lichtbrechung gibt es in der Nook-App, in Chrome und in Edge.</div>
-          ))}
+        {prefs.glass && (
+          <>
+            <div class="field" style={{ marginTop: 16 }}>
+              <label>Durchsichtigkeit: {prefs.glassClarity}%</label>
+              <div class="row lg-range">
+                <span>Kaum</span>
+                <input type="range" min="0" max="100" step="5" value={prefs.glassClarity} onInput={(e) => setPref('glassClarity', +e.target.value)} />
+                <span>Ganz</span>
+              </div>
+            </div>
+            {windowGlassSupported() && (
+              <ToggleRow title="Fenster durchsichtig" desc="Dein Desktop scheint durch die ganze App – statt des Hintergrundbilds" on={prefs.windowGlass} onChange={(v) => withTransition(() => setPref('windowGlass', v))} />
+            )}
+            {refractionSupported() ? (
+              <ToggleRow title="Lichtbrechung an den Kanten" desc="Echte Verzerrung des Hintergrunds – braucht etwas mehr Grafikleistung" on={prefs.glassRefraction} onChange={(v) => setPref('glassRefraction', v)} />
+            ) : (
+              <div class="hint" style={{ marginTop: 10 }}>Dieser Browser kann nur den Weichzeichner. Die echte Lichtbrechung gibt es in der Nook-App, in Chrome und in Edge.</div>
+            )}
+          </>
+        )}
       </Section>
       <Section title="Hintergrund">
         <div class="wp-grid">
@@ -543,6 +557,7 @@ function Appearance() {
         </div>
         <ToggleRow title="Bewegter Hintergrund" desc="Die Farbwolken treiben ganz langsam" on={prefs.wallpaperMotion} onChange={(v) => setPref('wallpaperMotion', v)} />
         {!prefs.glass && <div class="hint">Tipp: Am schönsten wirkt der Hintergrund mit Liquid Glass – ohne ist er nur leicht zu sehen.</div>}
+        {prefs.glass && prefs.windowGlass && windowGlassSupported() && <div class="hint">Gerade scheint dein Desktop durch. Der Hintergrund hier gilt wieder, sobald „Fenster durchsichtig" aus ist.</div>}
       </Section>
       <Section title="Farbschema">
         <div class="row" style={{ flexWrap: 'wrap' }}>

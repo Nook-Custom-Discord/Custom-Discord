@@ -362,13 +362,17 @@ function applyTheme() {
   // Liquid Glass: Materialien über das Attribut, Lichtbrechung über glass.js
   if (prefs.glass) root.dataset.glass = prefs.glass;
   else delete root.dataset.glass;
+  // Durchsichtigkeit: 0 % = fast deckend, 50 % = Standard, 100 % = ganz klar (skaliert die Glas-Tönung)
+  root.style.setProperty('--glass-o', String((100 - (prefs.glassClarity ?? 50)) / 50));
   syncGlass();
   document.body.classList.add('platform-' + (window.nook?.platform || 'web'));
   const bg = getComputedStyle(root).getPropertyValue('--bg').trim();
   const fg = getComputedStyle(root).getPropertyValue('--text2').trim();
-  if (window.nook && (applyTheme.last !== bg + fg)) {
-    applyTheme.last = bg + fg;
-    window.nook.setTitleBar(bg.length === 4 ? '#000000' : bg, fg);
+  // durchsichtiges Fenster: Fensterknöpfe ohne eigene Fläche
+  const tb = root.hasAttribute('data-winglass') ? '#00000000' : bg.length === 4 ? '#000000' : bg;
+  if (window.nook && applyTheme.last !== tb + fg) {
+    applyTheme.last = tb + fg;
+    window.nook.setTitleBar(tb, fg);
   }
 }
 

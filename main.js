@@ -54,6 +54,17 @@ function localIPs() {
   return out;
 }
 
+// Durchsichtiges Fenster (Desktop scheint durch): Windows 11 22H2+ (Acryl) und macOS (Vibrancy)
+const transparentSupported = () => process.platform === 'darwin' || (process.platform === 'win32' && Number(os.release().split('.')[2] || 0) >= 22621);
+function applyTransparency(on) {
+  if (!win || !transparentSupported()) return;
+  try {
+    if (process.platform === 'darwin') win.setVibrancy(on ? 'under-window' : null);
+    else win.setBackgroundMaterial(on ? 'acrylic' : 'none');
+    win.setBackgroundColor(on ? '#00000000' : '#0d0f14');
+  } catch {}
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1360,
@@ -73,6 +84,7 @@ function createWindow() {
       spellcheck: true,
     },
   });
+  if (config.transparent) applyTransparency(true);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   win.once('ready-to-show', () => win.show());
   // Testmodus: NOOK_SCREENSHOT=pfad.png speichert nach dem Laden einen Screenshot und beendet die App
@@ -234,7 +246,13 @@ ipcMain.handle('host-stop', async () => {
   writeConfig(config);
   return { running: false };
 });
-ipcMain.handle('get-config', () => ({ closeToTray: config.closeToTray !== false, autoStart: app.getLoginItemSettings().openAtLogin, version: app.getVersion(), platform: process.platform }));
+ipcMain.handle('get-config', () => ({ closeToTray: config.closeToTray !== false, autoStart: app.getLoginItemSettings().openAtLogin, version: app.getVersion(), platform: process.platform, transparentSupported: transparentSupported(), transparent: !!config.transparent }));
+ipcMain.on('set-transparent', (e, on) => {
+  if (!!config.transparent === !!on) return;
+  config.transparent = !!on;
+  writeConfig(config);
+  applyTransparency(!!on);
+});
 ipcMain.handle('set-config', (e, c) => {
   if (c.closeToTray !== undefined) config.closeToTray = !!c.closeToTray;
   if (c.autoStart !== undefined) app.setLoginItemSettings({ openAtLogin: !!c.autoStart, openAsHidden: true });

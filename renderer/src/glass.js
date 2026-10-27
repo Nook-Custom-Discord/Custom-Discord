@@ -2,7 +2,7 @@
 // Für jede Elementgröße entsteht ein SVG-Filter mit einer Verschiebungskarte (Displacement-Map). Als
 // backdrop-filter zieht er den Hintergrund am Rand nach innen – wie der Rand einer gewölbten Glaslinse.
 // SVG-Filter als backdrop-filter kann nur Chromium (Electron, Chrome, Edge); sonst bleibt es beim Weichzeichner.
-import { prefs, setPref } from './store';
+import { prefs, setPref, update } from './store';
 
 // Glasflächen mit Lichtbrechung: alles, was über wechselndem Inhalt schwebt (Hintergrund, Nachrichten,
 // übrige Oberfläche). Die großen Panels sind bewusst nicht dabei (nur Weichzeichner) – spart Grafikleistung.
@@ -250,8 +250,31 @@ function onOut(e) {
   if (!e.relatedTarget) unshine();
 }
 
+// Durchsichtiges Fenster (nur Desktop-App unter Windows 11 / macOS): statt des Hintergrunds scheint der Desktop durch.
+// Ob das System es kann, weiß nur der Hauptprozess – bis zur Antwort bleibt alles, wie es ist.
+let winOk = null;
+let winSent = null;
+if (window.nook?.setTransparent)
+  window.nook
+    .getConfig()
+    .then((c) => {
+      winOk = !!c.transparentSupported;
+      winSent = !!c.transparent;
+      update();
+    })
+    .catch(() => {});
+export const windowGlassSupported = () => !!winOk;
+
 // Wird bei jedem Rendern aufgerufen (applyTheme) und gleicht den Zustand mit den Einstellungen ab
 export function syncGlass() {
+  if (winOk !== null) {
+    const on = winOk && !!prefs.glass && prefs.windowGlass;
+    document.documentElement.toggleAttribute('data-winglass', on);
+    if (on !== winSent) {
+      winSent = on;
+      window.nook.setTransparent(on);
+    }
+  }
   const want = prefs.glass || '';
   const wantRefract = !!want && prefs.glassRefraction && refractionSupported();
   if (want !== mode) {
