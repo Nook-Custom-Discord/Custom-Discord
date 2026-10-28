@@ -46,6 +46,12 @@ function preferCodecs(transceiver, kind, content = 'motion') {
   } catch {}
 }
 
+// Name des Standard-Mikrofons (zum Erkennen, ob das System auf ein anderes Headset gewechselt hat)
+async function defaultInputLabel() {
+  const devs = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+  return devs.find((d) => d.kind === 'audioinput' && d.deviceId === 'default')?.label || '';
+}
+
 class VoiceEngine {
   constructor() {
     this.channelId = null;
@@ -83,6 +89,8 @@ class VoiceEngine {
       }
     });
     window.addEventListener('blur', () => (this.pttDown = false));
+    // Headset im Anruf an- oder abgesteckt -> Mikrofon/Ausgabe neu zuordnen
+    navigator.mediaDevices?.addEventListener?.('devicechange', () => this.onDeviceChange());
   }
 
   get connected() {
@@ -202,6 +210,24 @@ class VoiceEngine {
     }
     this.micSrc = this.ctx.createMediaStreamSource(this.micRaw);
     this.micSrc.connect(this.inGain);
+    // Gerät abgezogen -> neu öffnen (fällt dann aufs Standardgerät zurück)
+    const track = this.micRaw.getAudioTracks()[0];
+    if (track) track.onended = () => this.ctx && this.micRaw?.getAudioTracks()[0] === track && this.startMic();
+    this.micDefault = await defaultInputLabel();
+  }
+
+  // Geräte haben sich geändert (Headset an/aus): Mikro neu öffnen, wenn es weg ist oder – bei „Standard“ –
+  // das Standardgerät gewechselt hat; gewählte Ausgabe neu setzen, sobald sie wieder da ist
+  async onDeviceChange() {
+    if (!this.ctx) return;
+    const devs = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+    const track = this.micRaw?.getAudioTracks()[0];
+    const def = devs.find((d) => d.kind === 'audioinput' && d.deviceId === 'default')?.label;
+    if (!track || track.readyState === 'ended' || (!prefs.inputDevice && def && def !== this.micDefault)) await this.startMic();
+    if (prefs.outputDevice && this.ctx?.setSinkId && devs.some((d) => d.deviceId === prefs.outputDevice)) {
+      await this.ctx.setSinkId('').catch(() => {});
+      await this.ctx.setSinkId(prefs.outputDevice).catch(() => {});
+    }
   }
 
   teardownAudio() {

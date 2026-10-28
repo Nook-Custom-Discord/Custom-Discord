@@ -1,13 +1,19 @@
-## Nook 1.3.0 – neues Design & Liquid Glass
+## Nook 1.4.0 – Live-Animationen & Headset-Fixes
 
 **Herunterladen:** unten bei *Assets*
-- **Windows:** `Nook-Setup-1.3.0.exe` – beim ersten Start evtl. SmartScreen → *Weitere Informationen* → *Trotzdem ausführen*
-- **Mac:** `Nook-1.3.0-mac.dmg` – Nook in „Programme“ ziehen, dann *Rechtsklick → Öffnen → Öffnen*. Bei „beschädigt“ einmal im Terminal: `xattr -cr /Applications/Nook.app`
+- **Windows:** `Nook-Setup-1.4.0.exe` – beim ersten Start evtl. SmartScreen → *Weitere Informationen* → *Trotzdem ausführen*
+- **Mac:** `Nook-1.4.0-mac.dmg` – Nook in „Programme“ ziehen, dann *Rechtsklick → Öffnen → Öffnen*. Bei „beschädigt“ einmal im Terminal: `xattr -cr /Applications/Nook.app`
+
+### Headset
+- Nook verstellt nicht mehr die Mikrofon-Lautstärke deines Headsets im System
+- Play/Pause-Tasten am Headset steuern wieder Spotify & Co. statt Nook
+- Nook gibt das Audiogerät nach Benachrichtigungstönen wieder frei (kein Dauer-Rauschen/Knacken bei Bluetooth)
+- Headset im Anruf an- oder abstecken: Mikrofon und Ton wechseln automatisch mit
+- „Sprache & Video“ öffnet das Mikrofon nicht mehr unnötig (Bluetooth bleibt im guten Ton-Modus)
 
 ### Neu
-- **Komplett neue Oberfläche:** schwebende Kapseln oben, Suche mit Strg+K, gleitende Markierungen in allen Tabs, neue Einstellungen mit Symbolen, schönere Dialoge, Menüs und Anruf-Ansicht
-- **Liquid Glass** (Darstellung, Status-Menü oder Strg+Umschalt+G): durchsichtiges Glas mit Lichtbrechung an den Kanten und Lichtreflex
-- **Glas anpassen:** Durchsichtigkeit, Unschärfe, Lichtbrechung, Glanz, Glasfarbe – plus fertige Stile (Standard, Durchsicht, Kristall, Milchglas)
-- **Hinter dem Fenster:** *Desktop verschwommen* (Windows 11 & Mac) oder *Glas über deinen Apps* (Windows 10/11) – Nook liegt wie Apple-Glas über den Apps dahinter
-- **9 Hintergründe** oder ein eigenes Bild
-- Nachrichtenliste verrutscht nicht mehr beim Rechtsklick auf kurze Nachrichten
+- **14 Live-Profil-Effekte** (Feuerwerk, Nordlicht, Galaxienwirbel, Blitzsturm, Sakura-Wind, Matrix-Code, Konfetti-Kanone …) und **6 Live-Avatar-Dekorationen** (Flammenkranz, Lichtorbit, Plasmaring, Sternenwirbel, Blütenwirbel, Eiskristallkranz) – flüssig mit Leuchten, Schwerkraft und Tiefe
+- **6 Live-Pakete:** Inferno, Feuerwerk, Gewitter, Kosmos, Hanami, Polarnacht
+- **Glas über deinen Apps** ist jetzt auch in Bildschirmübertragungen sichtbar (Einstellung „In Bildschirmübertragungen sichtbar“)
+
+Alles aus 1.3.0 ist natürlich dabei: neue Oberfläche, Liquid Glass mit „Glas anpassen“, Hintergründe.

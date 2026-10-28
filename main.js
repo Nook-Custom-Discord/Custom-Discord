@@ -4,8 +4,14 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+// Chromium-Schalter (je Schalter nur EIN Aufruf – ein zweiter überschreibt den ersten):
+// - Systemton beim Bildschirmteilen auf dem Mac
+// - WebRtcAllowInputVolumeAdjustment AUS: sonst dreht die automatische Verstärkung die Mikrofon-Lautstärke des
+//   Headsets im System hoch und runter (und sie bleibt verstellt, auch nach Nook) – Nook verstärkt nur digital
+// - HardwareMediaKeyHandling AUS: sonst schnappt sich Nook die Play/Pause-Tasten am Headset und Spotify & Co.
+//   reagieren nicht mehr
 if (process.platform === 'darwin') app.commandLine.appendSwitch('enable-features', 'MacLoopbackAudioForScreenShare,MacSckSystemAudioLoopbackOverride');
-app.commandLine.appendSwitch('enable-features', 'WebRtcAllowInputVolumeAdjustment');
+app.commandLine.appendSwitch('disable-features', 'WebRtcAllowInputVolumeAdjustment,HardwareMediaKeyHandling,MediaSessionService');
 app.setAppUserModelId('com.nook.app');
 
 if (!app.requestSingleInstanceLock()) {

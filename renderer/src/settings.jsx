@@ -764,7 +764,12 @@ function Voice() {
   const level = useMicLevel(testing);
   useEffect(() => {
     const load = () => navigator.mediaDevices.enumerateDevices().then(setDevices);
-    navigator.mediaDevices.getUserMedia({ audio: true }).then((s) => { s.getTracks().forEach((t) => t.stop()); load(); }).catch(load);
+    // Gerätenamen gibt es erst nach einer Mikrofon-Freigabe – das Mikro nur dann kurz öffnen, wenn sie fehlen
+    // (jedes Öffnen schaltet Bluetooth-Headsets in den Freisprech-Modus)
+    navigator.mediaDevices.enumerateDevices().then((d) => {
+      if (d.some((x) => x.kind === 'audioinput' && x.label)) return setDevices(d);
+      navigator.mediaDevices.getUserMedia({ audio: true }).then((s) => { s.getTracks().forEach((t) => t.stop()); load(); }).catch(load);
+    });
     navigator.mediaDevices.addEventListener('devicechange', load);
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', load);

@@ -4,6 +4,15 @@ import { S, prefs } from './store';
 let ctx = null;
 let out = null; // weicher Pfad: Tiefpass + leichter Hall
 let dry = null; // direkter Pfad, z. B. für Glasklänge und eigene Dateien
+let idleTimer = 0;
+// Nach dem letzten Ton gibt Nook das Audiogerät wieder frei: ein dauerhaft offener Ausgabe-Kanal hält
+// Bluetooth-Headsets belegt und erzeugt bei manchen ein leises Rauschen oder Knacken.
+function releaseLater(sec = 3) {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    if (ctx?.state === 'running') ctx.suspend().catch(() => {});
+  }, (sec + 1.5) * 1000);
+}
 function ac() {
   if (!ctx) {
     ctx = new AudioContext();
@@ -29,6 +38,7 @@ function ac() {
     dry = master;
   }
   if (ctx.state === 'suspended') ctx.resume();
+  releaseLater();
   if (prefs.outputDevice && ctx.setSinkId && ctx._sink !== prefs.outputDevice) {
     ctx._sink = prefs.outputDevice;
     ctx.setSinkId(prefs.outputDevice).catch(() => {});
@@ -225,6 +235,7 @@ async function playFile(url, maxDur = 6) {
   src.connect(g).connect(dry);
   src.start(t);
   src.stop(t + len + 0.05);
+  releaseLater(len);
   return len;
 }
 
