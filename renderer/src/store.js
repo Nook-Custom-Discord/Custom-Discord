@@ -12,6 +12,7 @@ const PREF_DEFAULTS = {
   glassBlur: 50, // Unschärfe hinter dem Glas in % (0 = gestochen scharf durchsehen)
   glassRefractStr: 50, // Stärke der Lichtbrechung an den Kanten in %
   glassShine: 50, // Glanz: Lichtkanten und Reflex in %
+  liveVisible: true, // „Glas über deinen Apps“: in Bildschirmübertragungen sichtbar (Standbild) statt live
   glassTint: '', // Glasfarbe: '' = passend zum Theme, 'white', 'black', 'accent' oder #rrggbb
   windowGlass: false, // Fenster durchsichtig, Desktop scheint durch (nur Desktop-App)
   wallpaper: 'aurora',

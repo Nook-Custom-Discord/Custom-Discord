@@ -287,13 +287,52 @@ if (window.nook?.setTransparent)
 export const windowCaps = () => winCaps || { blur: false, live: false };
 
 // ---------- Live-Bild hinter dem Glas ----------
-let live = null; // { stream, video, geom }
+// Zwei Arten (Einstellung „In Bildschirmübertragungen sichtbar“):
+//   sichtbar (Standard): Nook bleibt in Übertragungen/Screenshots zu sehen. Hinter dem Glas liegt ein Standbild der
+//     Apps; dafür wird Nook nur für einen Augenblick aus der Aufnahme genommen (beim Start und wenn man zu Nook
+//     zurückkehrt) – sonst würde es sich selbst aufnehmen.
+//   live: die Apps dahinter bewegen sich mit, Nook ist dafür dauerhaft aus Aufnahmen ausgeblendet.
+let live = null; // { stream, video, canvas, geom, realtime }
 let liveWant = false;
+let liveRealtime = false;
 let liveBusy = false;
+let snapping = false;
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 function placeLive() {
   const g = live?.geom;
   if (!g) return;
-  Object.assign(live.video.style, { width: g.w + 'px', height: g.h + 'px', transform: `translate(${-g.x}px, ${-g.y}px)` });
+  for (const el of [live.video, live.canvas])
+    Object.assign(el.style, { width: g.w + 'px', height: g.h + 'px', transform: `translate(${-g.x}px, ${-g.y}px)` });
+}
+// nächstes frisches Bild des Videos abwarten (höchstens 600 ms)
+function nextFrame(video) {
+  return new Promise((r) => {
+    const t = setTimeout(r, 600);
+    video.requestVideoFrameCallback?.(() => (clearTimeout(t), r()));
+  });
+}
+// Standbild ohne Nook aufnehmen: kurz aus der Aufnahme nehmen, zwei frische Bilder abwarten, wieder einblenden
+async function snapshot() {
+  if (!live || live.realtime || snapping) return;
+  snapping = true;
+  const l = live;
+  try {
+    await setLiveRate(true, 30);
+    await window.nook.liveProtect(true);
+    await wait(80);
+    await nextFrame(l.video);
+    await nextFrame(l.video);
+    if (live === l && l.video.videoWidth) {
+      l.canvas.width = l.video.videoWidth;
+      l.canvas.height = l.video.videoHeight;
+      l.canvas.getContext('2d').drawImage(l.video, 0, 0);
+      l.canvas.classList.add('ready');
+    }
+  } finally {
+    if (live === l && !l.realtime) await window.nook.liveProtect(false);
+    setLiveRate(document.hasFocus());
+    snapping = false;
+  }
 }
 async function startLive() {
   if (live || liveBusy) return;
@@ -314,9 +353,18 @@ async function startLive() {
     video.muted = true;
     video.autoplay = true;
     video.srcObject = stream;
+    const canvas = document.createElement('canvas');
+    canvas.className = 'live-glass live-still';
+    document.body.prepend(canvas);
     document.body.prepend(video);
-    live = { stream, video, geom: info };
+    live = { stream, video, canvas, geom: info, realtime: liveRealtime };
+    document.documentElement.dataset.liveglass = liveRealtime ? 'live' : 'still';
     placeLive();
+    if (liveRealtime) await window.nook.liveProtect(true);
+    else {
+      await video.play().catch(() => {});
+      await snapshot();
+    }
     setLiveRate(document.hasFocus());
   } catch {
     if (liveWant) window.nook.liveGlass(false);
@@ -327,12 +375,15 @@ function stopLive() {
   if (!live) return;
   live.stream.getTracks().forEach((t) => t.stop());
   live.video.remove();
+  live.canvas.remove();
   live = null;
+  delete document.documentElement.dataset.liveglass;
   window.nook.liveGlass(false);
 }
-// im Hintergrund reichen weniger Bilder pro Sekunde
-function setLiveRate(focused) {
-  live?.stream.getVideoTracks()[0]?.applyConstraints({ frameRate: { max: focused ? 30 : 10 } }).catch(() => {});
+// Bilder pro Sekunde: live 30 (im Hintergrund 10); für das Standbild reicht im Leerlauf 2
+function setLiveRate(focused, force) {
+  const max = force || (live?.realtime ? (focused ? 30 : 10) : 2);
+  return live?.stream.getVideoTracks()[0]?.applyConstraints({ frameRate: { max } }).catch(() => {});
 }
 if (window.nook?.liveGlass) {
   window.nook.on('live-geom', (g) => {
@@ -346,7 +397,11 @@ if (window.nook?.liveGlass) {
     live.geom = { ...live.geom, ...g };
     placeLive();
   });
-  window.addEventListener('focus', () => setLiveRate(true));
+  window.addEventListener('focus', () => {
+    setLiveRate(true);
+    // zurück in Nook: die Apps dahinter haben sich vielleicht geändert -> neues Standbild
+    if (live && !live.realtime) setTimeout(snapshot, 150);
+  });
   window.addEventListener('blur', () => setLiveRate(false));
 }
 
@@ -362,6 +417,9 @@ export function syncGlass() {
       else window.nook.setTransparent(want === 'blur');
     }
     liveWant = want === 'live';
+    liveRealtime = prefs.liveVisible === false;
+    // Art gewechselt (sichtbar <-> live) -> neu starten
+    if (live && live.realtime !== liveRealtime) stopLive();
     if (liveWant) startLive();
     else stopLive();
     if (want) document.documentElement.dataset.winglass = want;

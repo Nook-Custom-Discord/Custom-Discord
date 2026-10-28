@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('nook', {
   setTransparent: (on) => ipcRenderer.send('set-transparent', !!on),
   setWindowMode: (mode) => ipcRenderer.send('set-window-mode', mode),
   liveGlass: (on) => ipcRenderer.invoke('live-glass', !!on),
+  liveProtect: (on) => ipcRenderer.invoke('live-protect', !!on),
   isFocused: () => ipcRenderer.invoke('is-focused'),
   idleTime: () => ipcRenderer.invoke('idle-time'),
   notify: (opts) => ipcRenderer.send('notify', opts),

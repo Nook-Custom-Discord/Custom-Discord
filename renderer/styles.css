@@ -6925,6 +6925,25 @@ svg.dfx-wing.r {
 
 /* =================== Netze (Blutnetz & Co.) =================== */
 /* Avatar-Deko: generiertes Netzbild, atmet langsam und glüht */
+/* Live-Animationen (fxcanvas.jsx): Deko-Canvas ragt über den Avatar hinaus, Effekt-Canvas füllt die Karte */
+.cvdeco {
+  position: absolute;
+  left: -35%;
+  top: -35%;
+  width: 170%;
+  height: 170%;
+  pointer-events: none;
+}
+/* Live-Effekte liegen wie bei Discord über der ganzen Karte (Licht, kein Hindernis für Klicks) */
+.fxl.fxl-cv {
+  z-index: 7;
+}
+.fxl-cv .fxc {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
 .dweb {
   position: absolute;
   inset: -22%;
@@ -7466,6 +7485,14 @@ html[data-winglass] body,
   transform-origin: 0 0;
 }
 [data-winglass='live'] .wallpaper:not(.thumb) {
+  display: none;
+}
+/* Standbild-Art: das Bild liegt im Canvas; das Video läuft fast unsichtbar darunter weiter, damit es frische Bilder liefert */
+[data-liveglass='still'] video.live-glass {
+  opacity: 0.01;
+}
+[data-liveglass='live'] canvas.live-glass,
+canvas.live-glass:not(.ready) {
   display: none;
 }
 

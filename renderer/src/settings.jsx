@@ -522,11 +522,23 @@ function WindowModePicker() {
       </SegBox>
       <div class="hint" style={{ marginTop: 8 }}>
         {mode === 'live'
-          ? 'Nook liegt wie Apple-Glas über den Apps dahinter: Mit „Unschärfe“, „Lichtbrechung“ und „Durchsichtigkeit“ stellst du ein, wie stark. Damit sich Nook nicht selbst sieht, ist es dafür in Screenshots und Bildschirmübertragungen ausgeblendet.'
+          ? 'Nook liegt wie Apple-Glas über den Apps dahinter. Mit „Unschärfe“, „Lichtbrechung“ und „Durchsichtigkeit“ stellst du ein, wie stark.'
           : mode === 'blur'
             ? 'Dein Desktop scheint weich verschwommen durch die ganze App (Glas vom System).'
             : 'Hinter Nook liegt dein gewählter Hintergrund.'}
       </div>
+      {mode === 'live' && (
+        <ToggleRow
+          title="In Bildschirmübertragungen sichtbar"
+          desc={
+            prefs.liveVisible !== false
+              ? 'An: Nook ist in Übertragungen und Screenshots zu sehen. Hinter dem Glas liegt ein Standbild deiner Apps, das sich erneuert, sobald du zu Nook zurückkommst.'
+              : 'Aus: Die Apps hinter dem Glas bewegen sich live mit. Nook ist dafür in Übertragungen und Screenshots ausgeblendet.'
+          }
+          on={prefs.liveVisible !== false}
+          onChange={(v) => setPref('liveVisible', v)}
+        />
+      )}
     </div>
   );
 }

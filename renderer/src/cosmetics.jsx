@@ -1,6 +1,7 @@
 // Profil-Kosmetik: Avatar-Dekorationen, Profil-Effekte, Namensschilder, Namens-Stile.
 // Alles eigene Designs (CSS + Emoji + generierte SVG-Kunst), komplett gratis.
 import { ARTS, ART_BY_ID } from './art';
+import { FxCanvas, CARD_SCENES, DECO_SCENES } from './fxcanvas';
 
 // Generierte Stile (Netze, Dornen, Kristalle) gibt es jeweils als Deko, Effekt, Namensschild und Rahmen
 
@@ -76,6 +77,15 @@ export const DECORATIONS = [
   { id: 'petals', name: 'Blütensturm', cat: 'Wetter', ring: 'sakura', fx: 'petals', neu: true },
   { id: 'lovebubble', name: 'Liebesblase', cat: 'Wetter', ring: 'heartbeat', fx: 'hearts', neu: true },
   ...ARTS.map((a) => ({ id: a.id, name: a.name, cat: a.family, art: a.id, neu: true })),
+  // Live-Animationen auf Canvas (ab Profilgröße); in kleinen Listen steht stattdessen der passende Ring
+  ...[
+    ['flamering', 'flame'],
+    ['orbitals', 'prism'],
+    ['plasma', 'electric'],
+    ['starswirl', 'galaxy'],
+    ['petalring', 'sakura'],
+    ['frostring', 'frost'],
+  ].map(([sc, ring]) => ({ id: 'cv-' + sc, name: DECO_SCENES[sc].name, cat: 'Live-Animationen', canvas: sc, ring, neu: true })),
 ];
 export const DECO_BY_ID = Object.fromEntries(DECORATIONS.map((d) => [d.id, d]));
 
@@ -83,10 +93,13 @@ export function Deco({ id, size }) {
   const d = DECO_BY_ID[id];
   if (!d || !id) return null;
   const small = size < 30;
+  // Canvas-Dekorationen nur ab dieser Größe (Profil, Popout, Anruf, Auswahl) – Listen bekommen den Ring
+  const live = d.canvas && size >= 50;
   // ab Profilgröße spielt die Dekoration beim Erscheinen eine kurze Intro-Animation ab
   return (
     <div class={`deco ${size >= 64 ? 'deco-in' : ''} ${small ? 'deco-sm' : ''}`} style={{ '--sz': size + 'px' }}>
-      {d.ring && <div class={`dring dring-${d.ring}`} />}
+      {d.ring && !live && <div class={`dring dring-${d.ring}`} />}
+      {live && <FxCanvas deco scene={d.canvas} cls="cvdeco" />}
       {d.fx && <DecoFx fx={d.fx} small={small} />}
       {d.art && (
         // nur große Ansichten bekommen die volle Animation, Listen das ruhige Bild
@@ -317,6 +330,8 @@ export const EFFECTS = [
   { id: 'rainbow', name: 'Regenbogen', items: ['🌈', '✨'], mode: 'float', n: 6, overlay: 'rainbow' },
   { id: 'matrix', name: 'Matrix', items: ['code'], mode: 'rain', n: 18, overlay: 'matrix' },
   ...ARTS.map((a) => ({ id: a.id, name: a.name, art: a.id })),
+  // Live-Animationen auf Canvas: Feuerwerk, Nordlicht, Galaxie, Blitze … mit Leuchten, Schwerkraft und Tiefe
+  ...Object.entries(CARD_SCENES).map(([sc, v]) => ({ id: 'cv-' + sc, name: v.name, canvas: sc, neu: true })),
 ];
 const EFFECT_BY_ID = Object.fromEntries(EFFECTS.map((e) => [e.id, e]));
 
@@ -328,6 +343,12 @@ function rnd(i, k) {
 export function EffectLayer({ id }) {
   const fx = EFFECT_BY_ID[id];
   if (!fx || !id) return null;
+  if (fx.canvas)
+    return (
+      <div class="fxl fxl-cv">
+        <FxCanvas scene={fx.canvas} cls="fxc" />
+      </div>
+    );
   if (fx.art) {
     const a = ART_BY_ID[fx.art];
     // Partikel passend zum Stil: Tropfen (Netze), Blütenblätter (Dornen), Funkeln (Kristalle)
@@ -398,13 +419,30 @@ export const NAMEPLATES = [
 ];
 
 // ---------- Pakete: passende Deko + Effekt + Namensschild + Rahmen auf einen Klick ----------
-export const BUNDLES = ARTS.map((a) => ({
-  id: a.id,
-  name: a.name + '-Paket',
-  family: a.family,
-  glow: a.glow,
-  items: { decoration: a.id, effect: a.id, nameplate: a.id, frame: a.id },
-}));
+export const BUNDLES = [
+  ...ARTS.map((a) => ({
+    id: a.id,
+    name: a.name + '-Paket',
+    family: a.family,
+    glow: a.glow,
+    items: { decoration: a.id, effect: a.id, nameplate: a.id, frame: a.id },
+  })),
+  // Live-Pakete: Canvas-Deko + Canvas-Effekt + passender Rahmen und Namensschild
+  ...[
+    ['Inferno', '#ff6a2a', 'flamering', 'inferno', 'fire', 'fire'],
+    ['Feuerwerk', '#ffd166', 'orbitals', 'fireworks', 'rainbow', 'galaxy'],
+    ['Gewitter', '#8fb4ff', 'plasma', 'lightning', 'cyber', 'midnight'],
+    ['Kosmos', '#b48cff', 'starswirl', 'galaxy', 'galaxy', 'galaxy'],
+    ['Hanami', '#ff9ec4', 'petalring', 'sakurawind', 'sakura', 'sakura'],
+    ['Polarnacht', '#7ee0ff', 'frostring', 'aurora', 'ice', 'aurora'],
+  ].map(([name, glow, deco, effect, frame, nameplate]) => ({
+    id: 'cv-' + deco,
+    name: name + '-Paket',
+    family: 'Live-Animationen',
+    glow,
+    items: { decoration: 'cv-' + deco, effect: 'cv-' + effect, nameplate, frame },
+  })),
+];
 
 // Namensschilder und Rahmen der generierten Stile brauchen Bilder bzw. Farben -> einmal als CSS einhängen
 (function injectWebStyles() {

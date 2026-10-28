@@ -289,17 +289,26 @@ function setWindowMode(mode) {
   applyBlur(windowMode() === 'blur');
 }
 ipcMain.on('set-window-mode', (e, mode) => setWindowMode(mode));
-// Live-Bild für echtes Glas: Nook aus Aufnahmen ausblenden und die passende Bildschirm-Quelle liefern
+// Live-Bild für echtes Glas: passende Bildschirm-Quelle liefern. Ob Nook dabei aus Aufnahmen ausgeblendet ist,
+// steuert die Oberfläche über 'live-protect' (dauerhaft für das Live-Bild, oder nur kurz für ein Standbild).
 ipcMain.handle('live-glass', async (e, on) => {
   liveOn = !!on && liveSupported() && !!win;
-  try {
-    win?.setContentProtection(liveOn);
-  } catch {}
-  if (!liveOn) return null;
+  if (!liveOn) {
+    try {
+      win?.setContentProtection(false);
+    } catch {}
+    return null;
+  }
   const g = liveGeom();
   const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } });
   const src = sources.find((x) => x.display_id === g.displayId) || sources[0];
   return src ? { ...g, sourceId: src.id } : null;
+});
+ipcMain.handle('live-protect', (e, on) => {
+  try {
+    win?.setContentProtection(!!on && liveOn);
+  } catch {}
+  return true;
 });
 ipcMain.on('set-transparent', (e, on) => setWindowMode(on ? 'blur' : ''));
 ipcMain.handle('set-config', (e, c) => {
