@@ -13,13 +13,14 @@ import { fadeIn, withTransition } from './fx';
 import { setGlass, refractionSupported, windowCaps } from './glass';
 
 export const THEMES = [
-  ['ink', 'Tinte', ['#0b0d12', '#151922', '#1e2430']],
-  ['midnight', 'Mitternacht', ['#000', '#0b0b0d', '#16161a']],
-  ['dusk', 'Dämmerung', ['#120e1a', '#1c1628', '#2a2239']],
-  ['forest', 'Wald', ['#0b120f', '#131e18', '#1c2b23']],
-  ['paper', 'Papier', ['#e9e6df', '#fbfaf7', '#efebe4']],
+  ['ink', 'Graphit', ['#0c0c0e', '#161618', '#262629']],
+  ['midnight', 'Mitternacht', ['#000', '#0c0c0d', '#1c1c1e']],
+  ['dusk', 'Dämmerung', ['#100f16', '#1a1922', '#2a2934']],
+  ['forest', 'Wald', ['#0c100e', '#161c19', '#252d29']],
+  ['paper', 'Hell', ['#ececf0', '#ffffff', '#e9e9eb']],
 ];
-export const ACCENTS = ['#ff7a45', '#f5c542', '#2dd4a7', '#34d399', '#4cc3ff', '#60a5fa', '#c084fc', '#ff5c8a', '#fb7185', '#a3e635', '#e2e8f0'];
+// ruhige Systemfarben
+export const ACCENTS = ['#0a84ff', '#5e5ce6', '#bf5af2', '#ff375f', '#ff453a', '#ff9f0a', '#ffd60a', '#30d158', '#40c8e0', '#ac8e68', '#8e8e93'];
 
 function Section({ title, children }) {
   return (
@@ -131,7 +132,7 @@ const profileState = (me) => ({
   banner: me.banner || '',
   bio: me.bio || '',
   pronouns: me.pronouns || '',
-  accent: me.accent || '#ff7a45',
+  accent: me.accent || '#4a9ad9',
   theme: me.theme || null,
   decoration: me.decoration || '',
   effect: me.effect || '',

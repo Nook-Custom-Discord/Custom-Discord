@@ -288,7 +288,7 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
     if (Object.values(db.users).some((u) => u.username === uname)) return res.status(409).json({ error: 'Benutzername ist schon vergeben' });
     const { salt, hash } = hashPassword(String(password));
     const id = newId();
-    const accents = ['#ff7a45', '#2dd4a7', '#f5c542', '#ff5c8a', '#4cc3ff', '#a3e635'];
+    const accents = ['#d9774e', '#3aa88d', '#c9973a', '#d9607f', '#4a9ad9', '#7fa94a', '#9877d9'];
     db.users[id] = {
       id,
       username: uname,

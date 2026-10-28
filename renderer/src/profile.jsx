@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import { S, update, prefs, openModal, closeModal, openPopout, toast, confirmDialog } from './store';
 import { act, rpc, openDM, fileUrl, displayName, roleColor, copy, navigate, logout } from './api';
-import { Avatar, Name, NameText, STATUS_LABEL, StatusDot, Modal, ServerIcon, colorFor, SegBox } from './ui';
+import { Avatar, Name, NameText, STATUS_LABEL, StatusDot, Modal, ServerIcon, colorFor, tone, SegBox } from './ui';
 import { EffectLayer, Frame } from './cosmetics';
 import { Icon } from './icons';
 import { Md } from './message';
@@ -34,7 +34,7 @@ export function ProfileCard({ uid, serverId, preview, actions = true, onClose })
     <div class={`pcard ${themed ? 'themed' : ''} ${u.frame ? 'framed fr-' + u.frame : ''}`} style={style} onClick={(e) => e.stopPropagation()}>
       <EffectLayer id={u.effect} key={u.effect} />
       <Frame id={u.frame} />
-      <div class="pbanner" style={{ '--pbanner': banner ? `url(${banner})` : u.accent || colorFor(uid) }} />
+      <div class="pbanner" style={{ '--pbanner': banner ? `url(${banner})` : tone(u.accent) || colorFor(uid) }} />
       <div class="pav">
         <Avatar uid={uid} size={92} status={!preview} src={avatar} name={u.displayName} decoration={preview ? u.decoration || '' : undefined} key={preview ? u.decoration : uid} />
       </div>

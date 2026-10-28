@@ -6,7 +6,10 @@ import { Deco, nameClasses, nameVars } from './cosmetics';
 
 export const STATUS_LABEL = { online: 'Online', idle: 'Abwesend', dnd: 'Bitte nicht stören', invisible: 'Unsichtbar', offline: 'Offline' };
 
-const COLORS = ['#ff7a45', '#2dd4a7', '#f5c542', '#ff5c8a', '#4cc3ff', '#a3e635', '#c084fc', '#fb7185'];
+const COLORS = ['#d9774e', '#3aa88d', '#c9973a', '#d9607f', '#4a9ad9', '#7fa94a', '#9877d9', '#d46a78'];
+// frühere grelle Standardfarben auf ruhigere Töne abbilden (bestehende Profile)
+const SOFT = { '#ff7a45': '#d9774e', '#2dd4a7': '#3aa88d', '#f5c542': '#c9973a', '#ff5c8a': '#d9607f', '#4cc3ff': '#4a9ad9', '#a3e635': '#7fa94a', '#c084fc': '#9877d9', '#fb7185': '#d46a78' };
+export const tone = (c) => (c && SOFT[c.toLowerCase()]) || c;
 export function colorFor(id = '') {
   let h = 0;
   for (const c of id) h = (h * 31 + c.charCodeAt(0)) | 0;
@@ -20,13 +23,13 @@ export function Avatar({ uid, size = 40, status = false, serverId, speaking = fa
   const st = status ? (u?.status || 'offline') : null;
   const decoration = deco ? (decoOverride !== undefined ? decoOverride : u?.decoration) || undefined : undefined;
   return (
-    <div class={`avatar ${round ? 'round' : ''} ${speaking ? 'speaking' : ''}`} style={{ width: size, height: size, '--deco': u?.accent || colorFor(uid) }}>
+    <div class={`avatar ${round ? 'round' : ''} ${speaking ? 'speaking' : ''}`} style={{ width: size, height: size, '--deco': tone(u?.accent) || colorFor(uid) }}>
       {url && isVideoUrl(url) ? (
         <VideoAvatar src={url} live={size >= 64} />
       ) : url ? (
         <img class="img" src={url} alt="" draggable={false} loading="lazy" />
       ) : (
-        <div class="img" style={{ background: u?.accent || colorFor(uid), fontSize: size * 0.4 }}>
+        <div class="img" style={{ backgroundColor: tone(u?.accent) || colorFor(uid), fontSize: size * 0.4 }}>
           {([...(label || '?').trim().normalize('NFKC')][0] || '?').toUpperCase()}
         </div>
       )}
@@ -338,6 +341,7 @@ export function Toasts() {
 // Farbwolken bzw. eigenes Bild hinter der ganzen App. Im normalen Modus gedämpft,
 // im Liquid-Glass-Modus voll sichtbar, damit das Glas etwas zum Brechen hat.
 export const WALLPAPERS = [
+  ['graphite', 'Graphit', 'Ruhig & neutral'],
   ['aurora', 'Aurora', 'Deine Akzentfarbe'],
   ['sunset', 'Sonnenuntergang', 'Orange, Pink, Lila'],
   ['ocean', 'Ozean', 'Türkis & Blau'],
@@ -350,8 +354,8 @@ export const WALLPAPERS = [
 ];
 // gewählter Hintergrund (eigenes Bild nur, wenn auch eins hochgeladen ist)
 export function wallpaperId() {
-  if (prefs.wallpaper === 'custom') return prefs.wallpaperUrl ? 'custom' : 'aurora';
-  return WALLPAPERS.some(([w]) => w === prefs.wallpaper) ? prefs.wallpaper : 'aurora';
+  if (prefs.wallpaper === 'custom') return prefs.wallpaperUrl ? 'custom' : 'graphite';
+  return WALLPAPERS.some(([w]) => w === prefs.wallpaper) ? prefs.wallpaper : 'graphite';
 }
 export function Wallpaper() {
   const id = wallpaperId();

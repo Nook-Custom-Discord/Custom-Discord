@@ -2,7 +2,7 @@ import { useLayoutEffect, useState } from 'preact/hooks';
 
 const PREF_DEFAULTS = {
   theme: 'ink',
-  accent: '#ff7a45',
+  accent: '#0a84ff',
   fontScale: 1,
   density: 'cozy',
   reduceMotion: false,
@@ -15,7 +15,7 @@ const PREF_DEFAULTS = {
   liveVisible: true, // „Glas über deinen Apps“: in Bildschirmübertragungen sichtbar (Standbild) statt live
   glassTint: '', // Glasfarbe: '' = passend zum Theme, 'white', 'black', 'accent' oder #rrggbb
   windowGlass: false, // Fenster durchsichtig, Desktop scheint durch (nur Desktop-App)
-  wallpaper: 'aurora',
+  wallpaper: 'graphite',
   wallpaperUrl: '',
   wallpaperMotion: true,
   showEmbeds: true,
@@ -61,9 +61,21 @@ const PREF_DEFAULTS = {
   idleMinutes: 10,
 };
 
+// Design 2 (ruhig & edel): alte Standardwerte auf die neuen umstellen, eigene Wahl bleibt
+function migratePrefs(p) {
+  if (!Object.keys(p).length || p.design >= 2) return p;
+  if (p.accent === '#ff7a45') delete p.accent;
+  if (p.wallpaper === 'aurora') delete p.wallpaper;
+  p.design = 2;
+  try {
+    localStorage.setItem('nook.prefs', JSON.stringify({ ...PREF_DEFAULTS, ...p }));
+  } catch {}
+  return p;
+}
+
 function loadPrefs() {
   try {
-    return { ...PREF_DEFAULTS, ...JSON.parse(localStorage.getItem('nook.prefs') || '{}') };
+    return { ...PREF_DEFAULTS, ...migratePrefs(JSON.parse(localStorage.getItem('nook.prefs') || '{}')) };
   } catch {
     return { ...PREF_DEFAULTS };
   }
