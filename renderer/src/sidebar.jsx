@@ -1,10 +1,10 @@
 import { useState } from 'preact/hooks';
 import { S, update, prefs, setPref, openModal, openMenu, openPopout, confirmDialog, promptDialog, toast } from './store';
 import { act, rpc, navigate, serverUnread, sortedChannels, isUnread, displayName, channelTitle, voiceMembers, can, P, dmList, roleColor, hoistRole, markRead, copy, openDM, fileUrl, serverIdOf, notifyLevel, updateBadge } from './api';
-import { Avatar, ServerIcon, ChannelIcon, Name, STATUS_LABEL, GroupIcon, onlineCount } from './ui';
+import { Avatar, ServerIcon, ChannelIcon, Name, STATUS_LABEL, GroupIcon, onlineCount, useIndicator } from './ui';
 import { Icon, LogoMark } from './icons';
 import { V } from './voice';
-import { VoiceCard, voiceUserMenu } from './voiceui';
+import { CallIsland, voiceUserMenu } from './voiceui';
 import { EmojiView } from './picker';
 
 const IS_MAC = window.nook?.platform === 'darwin' || /Mac/.test(navigator.platform);
@@ -36,7 +36,7 @@ export function TopBar() {
 
   return (
     <div class="topbar">
-      <button class={`logo-btn ${home ? 'active' : ''}`} onClick={() => { navigate('@me', S.view.serverId === '@me' ? S.view.channelId : null); S.mobileNav = 'nav'; update(); }} data-tip="Freunde & Direktnachrichten">
+      <button class={`logo-btn ${home ? 'active' : ''}`} onClick={() => { navigate('@me', S.view.serverId === '@me' ? S.view.channelId : null); S.mobileNav = 'nav'; update(); }} data-tip="Freunde & Chats">
         <div class="logo-mark">
           <LogoMark />
         </div>
@@ -81,46 +81,29 @@ export function TopBar() {
         </button>
       </div>
       <div class="spacer" />
+      <CallIsland />
+      <div class="spacer" />
       <button class="search-pill" data-tip="Schnell wechseln" onClick={() => openModal('quickSwitch')}>
         <Icon name="search" size={16} />
         <span class="sp-t">Suchen</span>
         <span class="kbd">{IS_MAC ? '⌘K' : 'Strg K'}</span>
       </button>
-      <button class="me-chip" onClick={(e) => openPopout(e, 'status', { prefer: 'bottom' })}>
-        <Avatar uid={me.id} size={32} status />
-        <div style={{ minWidth: 0, textAlign: 'left' }}>
-          <div class="n ellipsis">{me.displayName}</div>
-          <div class="s ellipsis">{me.customStatus?.text || STATUS_LABEL[me.status]}</div>
-        </div>
-      </button>
-    </div>
-  );
-}
-
-// ---------- Unteres Dock ----------
-export function UserDock() {
-  const me = S.me;
-  return (
-    <div class="dock">
-      <VoiceCard />
-      <div class="user-dock">
-        <button class="who" onClick={(e) => openPopout(e, 'status', { prefer: 'top' })}>
-          <Avatar uid={me.id} size={34} status />
-          <div style={{ minWidth: 0 }}>
-            <div class="n ellipsis">{me.displayName}</div>
-            <div class="s ellipsis">
-              {me.customStatus?.emoji && <EmojiView e={me.customStatus.emoji} size={12} />} {me.customStatus?.text || '@' + me.username}
-            </div>
-          </div>
-        </button>
-        <button class={`ibtn ${V.muted ? 'red' : ''}`} data-tip={V.muted ? 'Stummschaltung aufheben' : 'Stummschalten'} onClick={() => V.toggleMute()}>
+      <div class="me-dock">
+        <button class={`ibtn sm ${V.muted ? 'red' : ''}`} data-tip={V.muted ? 'Stummschaltung aufheben' : 'Stummschalten'} onClick={() => V.toggleMute()}>
           <Icon name={V.muted ? 'micOff' : 'mic'} />
         </button>
-        <button class={`ibtn ${V.deafened ? 'red' : ''}`} data-tip={V.deafened ? 'Ton an' : 'Ton aus'} onClick={() => V.toggleDeafen()}>
+        <button class={`ibtn sm ${V.deafened ? 'red' : ''}`} data-tip={V.deafened ? 'Ton an' : 'Ton aus'} onClick={() => V.toggleDeafen()}>
           <Icon name={V.deafened ? 'headphonesOff' : 'headphones'} />
         </button>
-        <button class="ibtn" data-tip="Einstellungen" onClick={() => { S.settings = { tab: 'account' }; update(); }}>
+        <button class="ibtn sm md-gear" data-tip="Einstellungen" onClick={() => { S.settings = { tab: 'account' }; update(); }}>
           <Icon name="gear" />
+        </button>
+        <button class="me-chip" onClick={(e) => openPopout(e, 'status', { prefer: 'bottom' })}>
+          <Avatar uid={me.id} size={32} status />
+          <div style={{ minWidth: 0, textAlign: 'left' }}>
+            <div class="n ellipsis">{me.displayName}</div>
+            <div class="s ellipsis">{me.customStatus?.text || STATUS_LABEL[me.status]}</div>
+          </div>
         </button>
       </div>
     </div>
@@ -128,33 +111,58 @@ export function UserDock() {
 }
 
 // ---------- Home-Seitenleiste ----------
+const DM_FILTERS = [
+  ['all', 'Alle'],
+  ['unread', 'Ungelesen'],
+  ['groups', 'Gruppen'],
+];
+
 export function HomeSidebar() {
-  const dms = dmList();
+  const [filter, setFilter] = useState('all');
+  const [fRef, fInd] = useIndicator();
+  const all = dmList();
+  const dms = all.filter((c) => filter === 'all' || (filter === 'unread' ? isUnread(c) : c.type === 'group'));
   const incoming = Object.values(S.rel).filter((t) => t === 'incoming').length;
+  const friendsOnline = Object.entries(S.rel).filter(([id, t]) => t === 'friend' && S.users[id]?.status && S.users[id].status !== 'offline').length;
   return (
-    <div class="panel sidebar">
-      <div class="sb-head">
-        <button class="sb-title" onClick={() => openModal('quickSwitch')} style={{ fontWeight: 600, color: 'var(--muted)', fontSize: 14 }}>
-          <Icon name="search" size={16} /> Unterhaltung suchen …
+    <div class="panel sidebar home">
+      <div class="home-head">
+        <div class="hh-title">Chats</div>
+        <button class="ibtn" data-tip="Neue Gruppe" onClick={() => openModal('createGroup')}>
+          <Icon name="plus" />
         </button>
       </div>
       <div class="sb-scroll">
-        <button class={`nav-item ${!S.view.channelId ? 'active' : ''}`} onClick={() => navigate('@me', null)}>
-          <Icon name="users" /> Freunde
-          {incoming > 0 && <span class="badge" style={{ marginLeft: 'auto' }}>{incoming}</span>}
+        <button class={`friends-tile ${!S.view.channelId ? 'active' : ''}`} onClick={() => navigate('@me', null)}>
+          <span class="ft-ic">
+            <Icon name="users" />
+          </span>
+          <span class="grow" style={{ minWidth: 0 }}>
+            <b>Freunde</b>
+            <small class="ellipsis">
+              {friendsOnline} online
+              {incoming > 0 && ` · ${incoming} ${incoming === 1 ? 'Anfrage' : 'Anfragen'}`}
+            </small>
+          </span>
+          {incoming > 0 && <span class="badge">{incoming}</span>}
         </button>
-        <div class="sb-section">
-          <span class="grow">Direktnachrichten</span>
-          <button class="ibtn sm" data-tip="Gruppe erstellen" onClick={() => openModal('createGroup')}>
-            <Icon name="plus" />
-          </button>
+        <div class="dm-filter" ref={fRef}>
+          {fInd}
+          {DM_FILTERS.map(([v, l]) => (
+            <button class={filter === v ? 'on' : ''} onClick={() => setFilter(v)}>
+              {l}
+            </button>
+          ))}
         </div>
         {dms.map((c) => (
           <DmItem ch={c} key={c.id} />
         ))}
-        {!dms.length && <div class="hint" style={{ padding: '6px 10px' }}>Noch keine Unterhaltungen. Füge Freunde hinzu und schreib ihnen!</div>}
+        {!dms.length && (
+          <div class="hint" style={{ padding: '6px 10px' }}>
+            {filter === 'unread' ? 'Alles gelesen. 🎉' : filter === 'groups' ? 'Noch keine Gruppen – oben mit + eine starten.' : 'Noch keine Chats. Füge Freunde hinzu und schreib ihnen!'}
+          </div>
+        )}
       </div>
-      <UserDock />
     </div>
   );
 }
@@ -279,7 +287,6 @@ export function ServerSidebar({ serverId }) {
           );
         })}
       </div>
-      <UserDock />
     </div>
   );
 }
@@ -399,7 +406,7 @@ export function MemberList({ serverId, ch }) {
           <>
             <div class="sb-section">
               {g.color && <i class="rdot" style={{ background: g.color }} />}
-              {g.name} — {g.ids.length}
+              {g.name} <span class="sb-count">{g.ids.length}</span>
             </div>
             {g.ids.map((id) => (
               <MemberRow uid={id} serverId={serverId} offline={g.offline} ch={ch} />

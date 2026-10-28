@@ -10,7 +10,8 @@ const REFRACT = [
   '.topbar .logo-btn',
   '.topbar .sdock',
   '.topbar .search-pill',
-  '.topbar .me-chip',
+  '.topbar .me-dock',
+  '.call-island',
   '.content > .chead',
   '.composer',
   '.autocomplete',
@@ -28,7 +29,7 @@ const REFRACT = [
   '.lg-demo .lg-glass',
 ].join(',');
 // Flächen, über die beim Hovern ein Lichtreflex wandert (Gegenstück in styles.css, Abschnitt „Liquid Glass“)
-const SHINE = REFRACT + ', .user-dock, .card, .reaction';
+const SHINE = REFRACT + ', .friends-tile, .card, .reaction';
 
 // Stärke je Variante: Weichzeichner im Glas, Breite der gewölbten Kante, maximale Verschiebung, Sättigung
 const LOOK = {

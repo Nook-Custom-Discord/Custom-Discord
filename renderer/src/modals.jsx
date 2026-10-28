@@ -352,7 +352,7 @@ function CreateGroupModal({ channelId }) {
   const creating = isDM || (!existing && sel.length > 1);
   const go = async () => {
     if (isDM) {
-      // Wie bei Discord: aus einer DM wird eine neue Gruppe mit allen
+      // Aus einer DM wird eine neue Gruppe mit allen
       const other = existing.recipients.find((r) => r !== S.me.id);
       const ch = await act('createGroup', { userIds: [other, ...sel], name, color });
       S.channels[ch.id] = ch;

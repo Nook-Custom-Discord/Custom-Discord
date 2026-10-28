@@ -62,7 +62,7 @@ function MessageList({ ch }) {
     if (!el) return;
     const first = list[0]?.id;
     const last = list[list.length - 1];
-    // Eigene neue Nachricht -> immer nach unten (wie bei Discord)
+    // Eigene neue Nachricht -> immer nach unten
     if (last && last.id !== prevLast.current && last.authorId === S.me.id && last.pending) atBottom.current = true;
     if (prevFirst.current && first !== prevFirst.current && prevHeight.current && !atBottom.current) {
       el.scrollTop += el.scrollHeight - prevHeight.current;
@@ -148,7 +148,7 @@ function MessageList({ ch }) {
               </div>
             ) : g.sep === 'new' ? (
               <div class="new-sep" key={g.key}>
-                <span>Neu</span>
+                <span>Neue Nachrichten</span>
               </div>
             ) : g.system ? (
               <Message key={g.key} m={g.msgs[0]} ch={ch} serverId={serverId} />
@@ -184,7 +184,7 @@ function ChatStart({ ch }) {
         <Avatar uid={other} size={80} />
         <h2 style={{ marginTop: 14 }}>{displayName(other)}</h2>
         <p style={{ fontWeight: 700, color: 'var(--text2)' }}>@{S.users[other]?.username}</p>
-        <p style={{ marginTop: 8 }}>Das ist der Anfang deines Direktchats mit <b>{displayName(other)}</b>.</p>
+        <p style={{ marginTop: 8 }}>Nur ihr zwei – schreib <b>{displayName(other)}</b> die erste Nachricht. 👋</p>
       </div>
     );
   }
@@ -213,8 +213,8 @@ function ChatStart({ ch }) {
           <ChannelIcon ch={ch} size={40} />
         </div>
         <div class="grow" style={{ minWidth: 0 }}>
-          <h2 class="ellipsis">Willkommen in #{ch.name}!</h2>
-          <p>{ch.topic || `Das ist der Anfang von #${ch.name} auf ${S.servers[serverId]?.name || 'diesem Server'}. Sag hallo! 👋`}</p>
+          <h2 class="ellipsis">{ch.name}</h2>
+          <p>{ch.topic || `Frisch auf ${S.servers[serverId]?.name || 'diesem Server'} – hier ist noch alles leer. Schreib was! ✍️`}</p>
         </div>
       </div>
       <div class="gs-actions">

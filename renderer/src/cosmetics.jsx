@@ -422,7 +422,7 @@ export const NAMEPLATES = [
 export const BUNDLES = [
   ...ARTS.map((a) => ({
     id: a.id,
-    name: a.name + '-Paket',
+    name: a.name + '-Set',
     family: a.family,
     glow: a.glow,
     items: { decoration: a.id, effect: a.id, nameplate: a.id, frame: a.id },
@@ -437,7 +437,7 @@ export const BUNDLES = [
     ['Polarnacht', '#7ee0ff', 'frostring', 'aurora', 'ice', 'aurora'],
   ].map(([name, glow, deco, effect, frame, nameplate]) => ({
     id: 'cv-' + deco,
-    name: name + '-Paket',
+    name: name + '-Set',
     family: 'Live-Animationen',
     glow,
     items: { decoration: 'cv-' + deco, effect: 'cv-' + effect, nameplate, frame },

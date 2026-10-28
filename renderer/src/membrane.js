@@ -3,11 +3,11 @@
 // das "Leben" aus Animationen im SVG selbst (Zellen pulsieren, die Membran wabert).
 
 export const WEBS = {
-  blood: { name: 'Blutnetz', base: '#a3111c', dark: '#3a0207', light: '#ff7a84', glow: '#ff1f35', cell: ['#ff4255', '#b30d1d'], hole: '#1a0003' },
-  frost: { name: 'Frostnetz', base: '#2f8fca', dark: '#0a2740', light: '#e0f6ff', glow: '#7dd3fc', cell: ['#c7efff', '#2b86c4'], hole: '#04121f' },
-  toxic: { name: 'Giftnetz', base: '#4a9612', dark: '#112804', light: '#e3ff8f', glow: '#84cc16', cell: ['#bef264', '#3f8a0c'], hole: '#061002' },
-  void: { name: 'Schattennetz', base: '#6b26d4', dark: '#170533', light: '#f0e3ff', glow: '#a855f7', cell: ['#dcbcff', '#7e22ce'], hole: '#0a0216' },
-  gold: { name: 'Goldnetz', base: '#c08d0c', dark: '#432d02', light: '#fff4c2', glow: '#fbbf24', cell: ['#ffe07a', '#b8860b'], hole: '#140d00' },
+  blood: { name: 'Karmesin-Geflecht', base: '#a3111c', dark: '#3a0207', light: '#ff7a84', glow: '#ff1f35', cell: ['#ff4255', '#b30d1d'], hole: '#1a0003' },
+  frost: { name: 'Frost-Geflecht', base: '#2f8fca', dark: '#0a2740', light: '#e0f6ff', glow: '#7dd3fc', cell: ['#c7efff', '#2b86c4'], hole: '#04121f' },
+  toxic: { name: 'Gift-Geflecht', base: '#4a9612', dark: '#112804', light: '#e3ff8f', glow: '#84cc16', cell: ['#bef264', '#3f8a0c'], hole: '#061002' },
+  void: { name: 'Schatten-Geflecht', base: '#6b26d4', dark: '#170533', light: '#f0e3ff', glow: '#a855f7', cell: ['#dcbcff', '#7e22ce'], hole: '#0a0216' },
+  gold: { name: 'Gold-Geflecht', base: '#c08d0c', dark: '#432d02', light: '#fff4c2', glow: '#fbbf24', cell: ['#ffe07a', '#b8860b'], hole: '#140d00' },
 };
 
 // deterministischer Zufall, damit jede Variante immer gleich aussieht

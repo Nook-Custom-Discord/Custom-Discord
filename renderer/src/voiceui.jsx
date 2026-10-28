@@ -40,7 +40,7 @@ export function voiceUserMenu(e, uid, serverId) {
 
 // ---------- Vollbild ----------
 // Das ganze Fenster geht in Vollbild und der Call füllt es aus (CSS-Klasse call-fs).
-// So bleiben alle Menüs (Bildschirm teilen, Soundboard, Rechtsklick …) bedienbar.
+// So bleiben alle Menüs (Bildschirm teilen, Klangbox, Rechtsklick …) bedienbar.
 export function exitCallFullscreen() {
   if (!S.callFs) return;
   S.callFs = false;
@@ -207,7 +207,7 @@ export function CallControls({ ch, compact }) {
       <button class={`round-btn ${V.screenStream ? 'on' : ''}`} data-tip={V.screenStream ? 'Stream beenden' : 'Bildschirm teilen'} onClick={() => (V.screenStream ? V.stopScreen() : openModal('screenshare'))}>
         <Icon name={V.screenStream ? 'screenOff' : 'screen'} />
       </button>
-      <button class="round-btn" data-tip="Soundboard" onClick={(e) => openPopout(e, 'soundboard', { prefer: 'top' })}>
+      <button class="round-btn" data-tip="Klangbox" onClick={(e) => openPopout(e, 'soundboard', { prefer: 'top' })}>
         <Icon name="soundboard" />
       </button>
       {ch.type === 'stage' && vs?.suppressed && (
@@ -331,7 +331,9 @@ export function VoiceStage({ ch }) {
 }
 
 // ---------- Kleine Statuskarte unten links ----------
-export function VoiceCard() {
+// Anruf-Insel: schwebende Kapsel oben in der Mitte, solange man in einem Anruf ist – Kanal, wer gerade spricht,
+// Kamera, Bildschirm, Klangbox und Auflegen. Mikro und Ton sitzen immer sichtbar beim eigenen Profil oben rechts.
+export function CallIsland() {
   if (!V.channelId) return null;
   const ch = S.channels[V.channelId];
   if (!ch) return null;
@@ -339,38 +341,42 @@ export function VoiceCard() {
   const states = [...V.peers.values()].map((p) => p.pc.connectionState);
   const connecting = states.some((s) => s === 'new' || s === 'connecting');
   const failed = states.some((s) => s === 'failed' || s === 'disconnected');
-  const pingColor = V.ping == null ? 'var(--ok)' : V.ping < 80 ? 'var(--ok)' : V.ping < 200 ? 'var(--warn)' : 'var(--danger)';
+  const tone = failed ? 'bad' : connecting ? 'wait' : V.ping != null && V.ping >= 200 ? 'slow' : 'ok';
+  const members = voiceMembers(ch.id);
   return (
-    <div class="voice-card">
-      <div class="row">
-        <div class="grow" style={{ minWidth: 0 }}>
-          <div class="state" style={{ color: failed ? 'var(--danger)' : connecting ? 'var(--warn)' : pingColor }} data-tip={V.ping != null ? `Ping: ${V.ping} ms` : ''}>
-            <Icon name="wave" size={16} />
-            {failed ? 'Verbindungsproblem' : connecting ? 'Verbinde …' : 'Sprachchat verbunden'}
-          </div>
-          <div class="where ellipsis" onClick={() => navigate(serverId || '@me', ch.id)}>
-            {channelTitle(ch)}
-            {serverId ? ` / ${S.servers[serverId]?.name}` : ''}
-          </div>
-        </div>
-        <button class="ibtn red" data-tip="Trennen" onClick={() => V.leave()}>
-          <Icon name="hangup" />
-        </button>
-      </div>
-      <div class="btns">
-        <button class={`ibtn ${V.camStream ? 'on' : ''}`} data-tip="Kamera" onClick={() => V.toggleCamera()}>
-          <Icon name={V.camStream ? 'video' : 'videoOff'} />
-        </button>
-        <button class={`ibtn ${V.screenStream ? 'on' : ''}`} data-tip={V.screenStream ? 'Stream beenden' : 'Bildschirm teilen'} onClick={() => (V.screenStream ? V.stopScreen() : openModal('screenshare'))}>
-          <Icon name="screen" />
-        </button>
-        <button class="ibtn" data-tip="Soundboard" onClick={(e) => openPopout(e, 'soundboard', { prefer: 'top' })}>
-          <Icon name="soundboard" />
-        </button>
-        <button class="ibtn" data-tip="Anzeigen" onClick={() => navigate(serverId || '@me', ch.id)}>
-          <Icon name="maximize" />
-        </button>
-      </div>
+    <div class={`call-island ci-${tone}`}>
+      <button class="ci-main" onClick={() => navigate(serverId || '@me', ch.id)} data-tip={failed ? 'Verbindungsproblem' : connecting ? 'Verbinde …' : V.ping != null ? `Zum Anruf · Ping ${V.ping} ms` : 'Zum Anruf'}>
+        <span class="ci-wave">
+          <i />
+          <i />
+          <i />
+        </span>
+        <span class="ci-title ellipsis">{channelTitle(ch)}</span>
+        <span class="ci-avs">
+          {members.slice(0, 4).map((m) => (
+            <span class={V.speaking.has(m.uid) ? 'sp' : ''}>
+              <Avatar uid={m.uid} size={22} round deco={false} />
+            </span>
+          ))}
+          {members.length > 4 && <span class="ci-more">+{members.length - 4}</span>}
+        </span>
+      </button>
+      {/* auf dem Handy ist das Mikro hier statt oben rechts */}
+      <button class={`ibtn sm ci-mute ${V.muted ? 'red' : ''}`} data-tip={V.muted ? 'Stummschaltung aufheben' : 'Stummschalten'} onClick={() => V.toggleMute()}>
+        <Icon name={V.muted ? 'micOff' : 'mic'} />
+      </button>
+      <button class={`ibtn sm ${V.camStream ? 'on' : ''}`} data-tip={V.camStream ? 'Kamera aus' : 'Kamera an'} onClick={() => V.toggleCamera()}>
+        <Icon name={V.camStream ? 'video' : 'videoOff'} />
+      </button>
+      <button class={`ibtn sm ${V.screenStream ? 'on' : ''}`} data-tip={V.screenStream ? 'Stream beenden' : 'Bildschirm teilen'} onClick={() => (V.screenStream ? V.stopScreen() : openModal('screenshare'))}>
+        <Icon name="screen" />
+      </button>
+      <button class="ibtn sm" data-tip="Klangbox" onClick={(e) => openPopout(e, 'soundboard', { prefer: 'bottom' })}>
+        <Icon name="soundboard" />
+      </button>
+      <button class="ci-leave" data-tip="Auflegen" onClick={() => V.leave()}>
+        <Icon name="hangup" />
+      </button>
     </div>
   );
 }

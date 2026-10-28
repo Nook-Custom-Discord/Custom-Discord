@@ -225,6 +225,9 @@ export function StatusPopout({ close }) {
         <span class={`switch sm ${prefs.glass ? 'on' : ''}`} />
       </button>
       <div class="menu-sep" />
+      <button class="menu-item" onClick={() => { close(); S.settings = { tab: 'account' }; update(); }}>
+        Einstellungen
+      </button>
       <button class="menu-item" onClick={() => { close(); openModal('profile', { uid: me.id }); }}>
         Mein Profil ansehen
       </button>

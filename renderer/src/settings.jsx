@@ -142,8 +142,8 @@ const profileState = (me) => ({
 
 const PROFILE_TABS = [
   ['general', 'Allgemein'],
-  ['bundles', '✨ Pakete'],
-  ['deco', 'Avatar-Deko'],
+  ['bundles', '✨ Sets'],
+  ['deco', 'Auren'],
   ['fx', 'Effekte & Rahmen'],
   ['name', 'Name & Schild'],
 ];
@@ -174,7 +174,7 @@ function Profile() {
     <>
       <h1>Profil</h1>
       <div class="hint" style={{ marginTop: -14, marginBottom: 18 }}>
-        ✨ Alles freigeschaltet: animierte Avatare & Banner (GIF), Profil-Farbthemen, animierte Avatar-Dekorationen, Profilrahmen, Profil-Effekte und Namens-Stile.
+        ✨ Alles freigeschaltet: animierte Avatare & Banner (GIF), Profil-Farbthemen, animierte Auren um den Avatar, Profilrahmen, Profil-Szenen und Namens-Stile.
       </div>
       <div class="ptabs" ref={tabsRef}>
         {tabInd}
@@ -260,7 +260,7 @@ function Profile() {
                 </div>
               </div>
               <div class="field">
-                <label>Profil-Effekt ({EFFECTS.length - 1})</label>
+                <label>Profil-Szene ({EFFECTS.length - 1})</label>
                 <div class="picker-grid">
                   {EFFECTS.map((fx) => (
                     <button class={`opt ${p.effect === fx.id ? 'on' : ''}`} onClick={() => set('effect', fx.id)}>
@@ -275,7 +275,7 @@ function Profile() {
           {tab === 'name' && (
             <>
               <div class="field">
-                <label>Namensschild (in Mitglieder- & DM-Liste)</label>
+                <label>Namensband (in Mitglieder- & Chat-Liste)</label>
                 <div class="picker-grid">
                   {NAMEPLATES.map((np) => (
                     <button class={`opt ${p.nameplate === np.id ? 'on' : ''}`} onClick={() => set('nameplate', np.id)}>
@@ -336,11 +336,11 @@ function Profile() {
   );
 }
 
-// Pakete: Deko, Effekt, Namensschild und Rahmen im selben Stil auf einen Klick
+// Sets: Aura, Szene, Namensband und Rahmen im selben Stil auf einen Klick
 function BundlePicker({ p, onApply, avatar, name }) {
   return (
     <div class="field">
-      <label>Pakete · alles passend auf einen Klick</label>
+      <label>Sets · alles passend auf einen Klick</label>
       {[...new Set(BUNDLES.map((b) => b.family))].map((fam) => (
         <>
           <div class="cat-title">{fam}</div>
@@ -355,15 +355,15 @@ function BundlePicker({ p, onApply, avatar, name }) {
                   </div>
                   <div class="bundle-body">
                     <b>{b.name}</b>
-                    <div class="muted" style={{ fontSize: 12.5 }}>Paket enthält 4 Gegenstände</div>
+                    <div class="muted" style={{ fontSize: 12.5 }}>Set mit 4 Teilen</div>
                     <div class="bundle-items">
-                      <span class="bundle-item" data-tip="Avatar-Dekoration">
+                      <span class="bundle-item" data-tip="Aura">
                         <Avatar uid={S.me.id} size={26} src={avatar} name={name} decoration={b.items.decoration} />
                       </span>
-                      <span class="bundle-item" data-tip="Profil-Effekt">
+                      <span class="bundle-item" data-tip="Profil-Szene">
                         <EffectLayer id={b.items.effect} />
                       </span>
-                      <span class="bundle-item" data-tip="Namensschild">
+                      <span class="bundle-item" data-tip="Namensband">
                         <div class={`np-preview nameplate np-${b.items.nameplate}`} />
                       </span>
                       <span class="bundle-item" data-tip="Profilrahmen">
@@ -387,7 +387,7 @@ function BundlePicker({ p, onApply, avatar, name }) {
   );
 }
 
-// Auswahl der Avatar-Dekorationen mit Kategorien, „Neu"-Filter und Suche
+// Auswahl der Auren mit Kategorien, „Neu"-Filter und Suche
 function DecoPicker({ value, onPick, avatar, name }) {
   const [cat, setCat] = useState('');
   const [q, setQ] = useState('');
@@ -401,7 +401,7 @@ function DecoPicker({ value, onPick, avatar, name }) {
   return (
     <div class="field">
       <div class="row" style={{ marginBottom: 4 }}>
-        <label class="label grow">Avatar-Dekoration ({DECORATIONS.length - 1})</label>
+        <label class="label grow">Aura ({DECORATIONS.length - 1})</label>
         <div class="search-box" style={{ margin: 0 }}>
           <Icon name="search" />
           <input placeholder="Dekoration suchen" value={q} onInput={(e) => setQ(e.target.value)} />
@@ -1079,7 +1079,7 @@ function Keybinds() {
     [['Esc'], 'Antwort/Bearbeiten abbrechen, Dialog schließen'],
     [['↑'], 'Letzte eigene Nachricht bearbeiten'],
     [['Umschalt', 'Enter'], 'Neue Zeile'],
-    [['Umschalt', 'Klick'], 'Auf Reaktion: Super-Reaktion · Auf Löschen: ohne Nachfrage'],
+    [['Umschalt', 'Klick'], 'Auf Reaktion: Mega-Reaktion · Auf Löschen: ohne Nachfrage'],
     [['Strg', ','], 'Einstellungen'],
     [['Strg', 'Umschalt', 'G'], 'Liquid Glass ein/aus'],
   ];

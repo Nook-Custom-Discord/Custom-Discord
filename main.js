@@ -215,7 +215,7 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
 
-  // Globale Tastenkürzel wie bei Discord: Mikro & Ton auch im Spiel umschalten
+  // Globale Tastenkürzel: Mikro & Ton auch im Spiel umschalten
   try {
     globalShortcut.register('CommandOrControl+Shift+M', () => win?.webContents.send('hotkey', 'mute'));
     globalShortcut.register('CommandOrControl+Shift+D', () => win?.webContents.send('hotkey', 'deafen'));

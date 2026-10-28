@@ -120,10 +120,10 @@ export function SoundboardPicker({ onPlay }) {
   return (
     <div class="picker" style={{ height: 'auto', maxHeight: 440 }} onMouseDown={(e) => e.stopPropagation()}>
       <div class="ptop" style={{ fontWeight: 800 }}>
-        <Icon name="soundboard" size={18} /> Soundboard
+        <Icon name="soundboard" size={18} /> Klangbox
       </div>
       <div class="pgrid" style={{ padding: 10 }}>
-        {!sounds.length && <div class="hint" style={{ padding: 20, textAlign: 'center' }}>Noch keine Sounds. Lade welche in den Server-Einstellungen → Soundboard hoch.</div>}
+        {!sounds.length && <div class="hint" style={{ padding: 20, textAlign: 'center' }}>Noch keine Sounds. Lade welche in den Server-Einstellungen → Klangbox hoch.</div>}
         {servers.map((s) => (
           <>
             <div class="pcat">{s.name}</div>

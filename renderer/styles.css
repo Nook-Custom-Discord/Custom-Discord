@@ -904,21 +904,151 @@ input[type='color'] {
   min-width: 70px;
   text-align: left;
 }
+/* eigenes Profil oben rechts: Mikro, Ton, Einstellungen und Status in einer Kapsel */
+.me-dock {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  flex: none;
+  border-radius: 99px;
+  background: var(--mat-raised);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--rim);
+}
+.me-dock .ibtn {
+  border-radius: 50%;
+}
 .me-chip {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 44px;
-  padding: 4px 14px 4px 5px;
+  height: 40px;
+  padding: 3px 14px 3px 4px;
   border-radius: 99px;
-  max-width: 230px;
+  max-width: 220px;
   flex: none;
-  border: 1px solid transparent;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s;
 }
 .me-chip:hover {
-  background: var(--mat-raised);
-  border-color: var(--glass-line);
+  background: var(--hover);
+}
+/* Anruf-Insel: schwebende Kapsel oben in der Mitte */
+.call-island {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 44px;
+  padding: 4px;
+  flex: none;
+  min-width: 0;
+  max-width: 460px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--ok) 12%, var(--mat-float));
+  backdrop-filter: var(--mat-float-fx);
+  border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--glass-line));
+  box-shadow: var(--rim-strong), 0 6px 22px -10px color-mix(in srgb, var(--ok) 60%, transparent);
+  animation: island-in 0.5s var(--spring);
+  -webkit-app-region: no-drag;
+}
+.call-island.ci-wait,
+.call-island.ci-slow {
+  --ok: var(--warn);
+}
+.call-island.ci-bad {
+  --ok: var(--danger);
+}
+@keyframes island-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.85);
+  }
+}
+.ci-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px 0 12px;
+  border-radius: 99px;
+  font-weight: 750;
+  font-size: 13.5px;
+  transition: background 0.15s;
+}
+.ci-main:hover {
+  background: var(--hover);
+}
+.ci-wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 16px;
+  flex: none;
+}
+.ci-wave i {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ok);
+  animation: ci-wave 1s ease-in-out infinite;
+}
+.ci-wave i:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.ci-wave i:nth-child(3) {
+  animation-delay: -0.6s;
+}
+@keyframes ci-wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.ci-title {
+  max-width: 160px;
+}
+.ci-avs {
+  display: flex;
+  flex: none;
+}
+.ci-avs > span {
+  margin-left: -6px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--panel2);
+  transition: box-shadow 0.15s;
+}
+.ci-avs > span:first-child {
+  margin-left: 0;
+}
+.ci-avs > span.sp {
+  box-shadow: 0 0 0 2px var(--ok), 0 0 10px var(--ok);
+}
+.ci-more {
+  margin-left: 4px;
+  font-size: 11.5px;
+  color: var(--muted);
+  align-self: center;
+}
+.call-island > .ci-mute {
+  display: none;
+}
+.ci-leave {
+  width: 46px;
+  height: 36px;
+  border-radius: 99px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, #ff5a7a, var(--danger));
+  box-shadow: 0 4px 12px -5px var(--danger);
+  transition: transform 0.25s var(--spring);
+}
+.ci-leave:hover {
+  transform: scale(1.06);
 }
 .me-chip .n {
   font-weight: 700;
@@ -1010,11 +1140,9 @@ input[type='color'] {
   align-items: center;
   gap: 4px;
   padding: 14px 6px 4px;
-  font-size: 11.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: color-mix(in srgb, var(--muted) 85%, var(--accent));
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--text2);
   cursor: pointer;
   user-select: none;
 }
@@ -1221,15 +1349,100 @@ input[type='color'] {
   color: var(--text);
   font-weight: 800;
 }
+/* Chats-Kopf, Freunde-Kachel und Filter in der Chat-Liste */
+.home-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 10px 0 16px;
+  flex: none;
+}
+.hh-title {
+  flex: 1;
+  font-size: 20px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+.friends-tile {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px;
+  border-radius: 16px;
+  text-align: left;
+  background: var(--mat-raised);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--rim);
+  transition: border-color 0.15s, transform 0.25s var(--spring), background 0.15s;
+}
+.friends-tile:hover {
+  transform: translateY(-1px);
+  border-color: var(--line2);
+}
+.friends-tile.active {
+  border-color: var(--accent-line);
+  background: color-mix(in srgb, var(--accent) 12%, var(--mat-raised));
+}
+.friends-tile .ft-ic {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--on-accent);
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 12px -6px var(--accent);
+}
+.friends-tile b {
+  display: block;
+  font-size: 14.5px;
+}
+.friends-tile small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+.dm-filter {
+  display: flex;
+  position: relative;
+  gap: 2px;
+  margin: 12px 0 8px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--mat-field);
+  border: 1px solid var(--glass-line);
+}
+.dm-filter button {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  padding: 6px 4px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+.dm-filter button.on {
+  color: var(--text);
+}
+.dm-filter .ind {
+  border-radius: 9px;
+}
 .sb-section {
   display: flex;
   align-items: center;
   gap: 7px;
   padding: 14px 8px 6px;
-  font-size: 11.5px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 12.5px;
+  font-weight: 750;
+  color: var(--text2);
+}
+.sb-count {
+  font-weight: 650;
   color: var(--muted);
 }
 .sb-section .rdot {
@@ -1263,83 +1476,6 @@ input[type='color'] {
   color: var(--text);
 }
 
-/* Dock unten in der Seitenleiste */
-.dock {
-  flex: none;
-  padding: 8px;
-  border-top: 1px solid var(--glass-line);
-  --sb: var(--panel2);
-}
-.voice-card {
-  border-radius: 16px;
-  background: var(--mat-raised);
-  padding: 10px;
-  margin-bottom: 8px;
-  border: 1px solid var(--glass-line);
-  box-shadow: var(--rim);
-}
-.voice-card .state {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--ok);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.voice-card .where {
-  font-size: 12.5px;
-  color: var(--muted);
-  cursor: pointer;
-}
-.voice-card .where:hover {
-  text-decoration: underline;
-  color: var(--text2);
-}
-.voice-card .btns {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  margin-top: 10px;
-}
-.voice-card .btns .ibtn {
-  width: 100%;
-  background: color-mix(in srgb, var(--panel3) 80%, transparent);
-}
-.voice-card .btns .ibtn.on {
-  background: var(--accent-soft);
-}
-.user-dock {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 4px;
-  border-radius: 16px;
-  background: var(--mat-raised);
-  border: 1px solid var(--glass-line);
-  box-shadow: var(--rim);
-}
-.user-dock .who {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex: 1;
-  min-width: 0;
-  padding: 4px;
-  border-radius: 12px;
-  text-align: left;
-  transition: background 0.15s;
-}
-.user-dock .who:hover {
-  background: var(--hover);
-}
-.user-dock .n {
-  font-weight: 750;
-  font-size: 13.5px;
-}
-.user-dock .s {
-  font-size: 11.5px;
-  color: var(--muted);
-}
 
 /* ---------- Inhalt ---------- */
 .content {
@@ -1553,26 +1689,32 @@ input[type='color'] {
 .new-sep {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 10px 24px;
-  color: var(--danger);
-  font-size: 10.5px;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  gap: 10px;
+  margin: 12px 24px;
+  color: var(--accent);
+  font-size: 11.5px;
+  font-weight: 800;
+}
+.new-sep::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(270deg, transparent, var(--accent-line));
 }
 .new-sep span {
-  padding: 2px 9px;
+  padding: 3px 11px;
   border-radius: 99px;
-  background: var(--danger);
-  color: #fff;
-  box-shadow: 0 0 14px -3px var(--danger);
+  color: var(--on-accent);
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  box-shadow: 0 0 14px -4px var(--accent);
 }
 .new-sep::before {
   content: '';
   flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--danger));
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-line));
 }
 .mgroup {
   display: flex;
@@ -1686,8 +1828,8 @@ body:not(.compact) .mgroup.own .bubble .edited {
 }
 .bubble.mention-me,
 body:not(.compact) .mgroup.own .bubble.mention-me {
-  box-shadow: inset 3px 0 0 var(--warn);
-  background: color-mix(in srgb, var(--warn) 12%, var(--bubble));
+  box-shadow: 0 0 0 1.5px var(--accent-line), 0 0 18px -6px var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--bubble));
   color: var(--text);
 }
 .bubble.emoji-only {
@@ -2636,21 +2778,6 @@ img.emoji {
 .friends-tabs:not(:has(> .ind)) .ftab.active {
   background: var(--panel3);
 }
-.ftab.add {
-  margin-left: 6px;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: var(--on-accent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 14px -6px var(--accent);
-}
-.ftab.add:hover {
-  color: var(--on-accent);
-  transform: translateY(-1px);
-}
-.ftab.add.active {
-  background: none;
-  color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent-line);
-}
 .friends-body {
   display: flex;
   flex: 1;
@@ -3399,6 +3526,60 @@ img.emoji {
   resize: none;
   color: var(--text2);
   padding: 0;
+}
+/* Nook-Profilkarte: Banner schwebt in der Karte, Avatar mittig, Inhalt in weichen Kacheln */
+.pcard .pbanner {
+  margin: 8px 8px 0;
+  height: 112px;
+  border-radius: 18px;
+}
+.pcard .pav {
+  left: 50%;
+  top: 66px;
+  translate: -50% 0;
+}
+.pcard .pbody {
+  padding: 56px 14px 14px;
+  text-align: center;
+}
+.pcard .pinner {
+  background: none;
+  backdrop-filter: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+.pcard .dn {
+  font-size: 22px;
+}
+.pcard .un {
+  margin-bottom: 4px;
+}
+.pcard .sec {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--mat-raised);
+  border: 1px solid var(--glass-line);
+  text-align: left;
+}
+.pcard .sec h4 {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
+  font-weight: 750;
+}
+.pcard .cstat {
+  top: 16px;
+  left: 16px;
+  right: auto;
+  max-width: calc(100% - 32px);
+  color: #fff;
+  background: rgba(10, 10, 14, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 99px;
+  box-shadow: none;
 }
 .fx-sparkle::after,
 .fx-hearts::after,
@@ -5979,6 +6160,23 @@ svg.dfx-wing.r {
     padding: 0;
     justify-content: center;
   }
+  /* Handy: Profil-Kapsel nur mit Avatar, Anruf-Insel nur mit Welle, Mikro und Auflegen */
+  .me-dock .ibtn,
+  .call-island > .ibtn,
+  .ci-avs,
+  .ci-title,
+  .topbar:has(.call-island) .search-pill {
+    display: none;
+  }
+  .call-island > .ci-mute {
+    display: grid;
+  }
+  .me-dock {
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
   .search-pill .sp-t,
   .search-pill .kbd {
     display: none;
@@ -6934,7 +7132,7 @@ svg.dfx-wing.r {
   height: 170%;
   pointer-events: none;
 }
-/* Live-Effekte liegen wie bei Discord über der ganzen Karte (Licht, kein Hindernis für Klicks) */
+/* Live-Szenen liegen über der ganzen Karte (nur Licht, Klicks gehen durch) */
 .fxl.fxl-cv {
   z-index: 7;
 }
@@ -7284,7 +7482,7 @@ video.img {
 }
 
 /* Lichtreflex unter dem Mauszeiger (gleiche Liste wie SHINE in glass.js) */
-[data-glass] :is(.topbar .logo-btn, .topbar .sdock, .topbar .search-pill, .topbar .me-chip, .content > .chead, .composer, .autocomplete, .jump-btn, .msg-tools, .stage-bar, .menu, .modal, .picker, .toast, .incoming, .login .box, .settings nav .inner, .user-dock, .card, .reaction) {
+[data-glass] :is(.topbar .logo-btn, .topbar .sdock, .topbar .search-pill, .topbar .me-dock, .call-island, .content > .chead, .composer, .autocomplete, .jump-btn, .msg-tools, .stage-bar, .menu, .modal, .picker, .toast, .incoming, .login .box, .settings nav .inner, .friends-tile, .card, .reaction) {
   background-image: radial-gradient(220px circle at var(--gx) var(--gy), var(--glass-hi), transparent 70%);
 }
 
@@ -7302,7 +7500,7 @@ video.img {
 
 /* Obere Leiste: einzelne Glas-Kapseln */
 [data-glass] .topbar .logo-btn,
-[data-glass] .topbar .me-chip,
+[data-glass] .topbar .me-dock,
 [data-glass] .topbar .sdock,
 [data-glass] .topbar .search-pill {
   background-color: var(--mat-float);
@@ -7317,7 +7515,7 @@ video.img {
   background: var(--active);
   box-shadow: var(--rim-strong);
 }
-[data-glass] :is(.topbar .logo-btn, .topbar .me-chip, .topbar .search-pill, .stab, .round-btn, .send-btn, .ftab, .btn):active {
+[data-glass] :is(.topbar .logo-btn, .topbar .me-dock, .topbar .search-pill, .stab, .round-btn, .send-btn, .ftab, .btn):active {
   transform: scale(0.94);
 }
 

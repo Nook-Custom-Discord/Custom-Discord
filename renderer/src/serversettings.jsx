@@ -228,7 +228,7 @@ function Sounds({ s }) {
   };
   return (
     <>
-      <h1>Soundboard</h1>
+      <h1>Klangbox</h1>
       <div class="hint" style={{ marginTop: -14, marginBottom: 16 }}>Kurze Sounds, die alle im Sprachkanal abspielen können – auf jedem Server und in Anrufen.</div>
       <button class="btn" onClick={add} disabled={busy}>{busy ? <Spinner /> : <Icon name="upload" />} Sound hochladen</button>
       <h3>{s.sounds.length} Sounds</h3>
@@ -341,7 +341,7 @@ export function ServerSettingsView() {
     ['roles', 'Rollen & Rechte', can(serverId, P.MANAGE_ROLES)],
     ['members', 'Mitglieder', true],
     ['emojis', 'Emojis', can(serverId, P.MANAGE_EMOJIS)],
-    ['sounds', 'Soundboard', can(serverId, P.MANAGE_EMOJIS)],
+    ['sounds', 'Klangbox', can(serverId, P.MANAGE_EMOJIS)],
     ['invites', 'Einladungen', can(serverId, P.MANAGE_SERVER)],
     ['bans', 'Banns', can(serverId, P.BAN)],
     ['danger', 'Übertragen / Löschen', s.ownerId === S.me.id],

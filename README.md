@@ -113,7 +113,7 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 - Direktnachrichten & Gruppenchats (bis 25 Personen) mit Gruppenbild-Collage, Beschreibung & Gruppenfarbe, Anrufe & Videoanrufe mit Klingeln
 - Markdown (fett, kursiv, unterstrichen, durchgestrichen, Überschriften, Listen, Zitate, Code-Blöcke mit Highlighting, Spoiler `||so||`), Zeitstempel `<t:…>`
 - Antworten, Bearbeiten, Löschen, Anheften, Weiterleiten, Als ungelesen markieren
-- Reaktionen (inkl. Super-Reaktionen mit Shift+Klick), Threads, Umfragen, Sprachnachrichten
+- Reaktionen (inkl. Mega-Reaktionen mit Shift+Klick), Threads, Umfragen, Sprachnachrichten
 - Erwähnungen (@Person, @Rolle, @everyone, @here, #Kanal), Tipp-Anzeige, Ungelesen-Markierungen & Badges
 - Dateien bis **2 GB**, Bilder/Videos/Audio direkt im Chat, Link-Vorschauen, YouTube-Player
 - Suche (mit `from:name`, `has:image|file|link`), Slash-Befehle (`/shrug`, `/poll`, `/nick`, `/spoiler`, `/me`, `/silent` …), Emoji-Autovervollständigung mit `:name:`
@@ -125,14 +125,14 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 - Studio-Sprachqualität (Opus 128 kbit/s)
 - Kamera bis 1080p60, Bildschirm/Fenster teilen bis **4K 120 FPS** mit Systemton, Fokus- & Vollbildansicht
 - Live-Anzeige der empfangenen Stream-Qualität (Auflösung, FPS, Datenrate), Bitrate wird automatisch auf mehrere Zuschauer verteilt, Codec passend zum Inhalt (H264 für Spiele, VP9 für Text)
-- Soundboard mit eigenen Sounds, Text-Chat im Sprachkanal, Bühnen-Kanäle mit „Sprechen anfragen"
+- Klangbox mit eigenen Sounds, Text-Chat im Sprachkanal, Bühnen-Kanäle mit „Sprechen anfragen"
 - Moderation: Server-Mute/-Taub, Verschieben, Trennen
 
 **Profil & Anpassung (alles gratis)**
-- Animierte Avatare & Banner (GIF), **Video-Profilbilder** (MP4/WebM bis 15 s – laufen im Profil, in Listen beim Drüberfahren), Profil-Farbthemen, über 60 Avatar-Dekorationen (davon 17 mehrschichtig animiert wie Portal, Schwarzes Loch, Engelsflügel, Cyber-HUD), animierte Profilrahmen, Profil-Effekte, Namens-Stile mit Schrift & Farbverlauf
-- **Live-Animationen** (flüssig auf Canvas, mit Leuchten, Schwerkraft und Tiefe): 14 Profil-Effekte – Feuerwerk, Nordlicht, Galaxienwirbel, Sternschnuppen, Glühwürmchen-Schwarm, Blitzsturm, Schneegestöber, Sakura-Wind, Matrix-Code, Schillernde Blasen, Liebesfunken, Feuersturm, Konfetti-Kanone, Unterwasser – und 6 Avatar-Dekorationen: Flammenkranz, Lichtorbit, Plasmaring, Sternenwirbel, Blütenwirbel, Eiskristallkranz. Dazu 6 Live-Pakete (Inferno, Feuerwerk, Gewitter, Kosmos, Hanami, Polarnacht). Sie laufen nur, solange sie zu sehen sind
-- 17 Pakete mit Deko, Profil-Effekt, Namensschild und Rahmen – alles auf einen Klick ausrüstbar, komplett generiert (keine Bilddateien):
-  - Netze (Blutnetz, Frostnetz, Giftnetz, Schattennetz, Goldnetz): glänzende organische Netze, Tropfen laufen herab
+- Animierte Avatare & Banner (GIF), **Video-Profilbilder** (MP4/WebM bis 15 s – laufen im Profil, in Listen beim Drüberfahren), Profil-Farbthemen, über 60 Auren um den Avatar (davon 17 mehrschichtig animiert wie Portal, Schwarzes Loch, Engelsflügel, Cyber-HUD), animierte Profilrahmen, Profil-Szenen, Namensbänder, Namens-Stile mit Schrift & Farbverlauf
+- **Live-Animationen** (flüssig auf Canvas, mit Leuchten, Schwerkraft und Tiefe): 14 Profil-Szenen – Feuerwerk, Nordlicht, Galaxienwirbel, Sternschnuppen, Glühwürmchen-Schwarm, Blitzsturm, Schneegestöber, Sakura-Wind, Matrix-Code, Schillernde Blasen, Liebesfunken, Feuersturm, Konfetti-Kanone, Unterwasser – und 6 Auren: Flammenkranz, Lichtorbit, Plasmaring, Sternenwirbel, Blütenwirbel, Eiskristallkranz. Dazu 6 Live-Sets (Inferno, Feuerwerk, Gewitter, Kosmos, Hanami, Polarnacht). Sie laufen nur, solange sie zu sehen sind
+- 17 Sets mit Aura, Profil-Szene, Namensband und Rahmen – alles auf einen Klick ausrüstbar, komplett generiert (keine Bilddateien):
+  - Geflechte (Karmesin, Frost, Gift, Schatten, Gold): glänzende organische Geflechte, Tropfen laufen herab
   - Dornen (Rosendornen, Dornröschen, Schattendornen): Ranken wachsen herein, Rosen erblühen, Blütenblätter fallen
   - Kristalle (Amethyst, Eiskristall, Rubin): facettierte Splitter, die aufblitzen und funkeln
   - Anime (Sakura-Sturm, Fuchsfeuer, Shinobi, Magical Girl, Manga-Action, Katana): kreisende Kirschblüten, flackerndes Fuchsfeuer mit Fuchsohren, wirbelnde Shuriken, Schleife mit funkelnden Sternen, Manga-Speedlines mit „!!"-Blase, gekreuzte Katanas mit Klingenglanz – eigene Motive, keine Serienfiguren
@@ -156,6 +156,16 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 - Schnellwechsler (Strg+K) und viele Tastenkürzel
 
 **Was (noch) fehlt:** Sticker, ein eingebauter GIF-Sucher (GIF-Links & -Uploads funktionieren aber), Bots/Webhooks, Audit-Log, AutoMod, geplante Events, Activities (Spiele im Sprachkanal), Handy-App, globales Push-to-Talk wenn das Fenster nicht aktiv ist.
+
+---
+
+## Veröffentlichen
+
+Nook ist eine eigenständige App mit eigenem Namen, Logo und eigener Oberfläche – kein Klon und kein offizielles Produkt eines anderen Anbieters. Bevor ihr Nook öffentlich anbietet:
+
+- **Repository umbenennen:** Name und Organisation des GitHub-Repos (`Nook-Custom-Discord/Custom-Discord`) enthalten eine fremde Marke. Benennt sie um (z. B. `nook-app/nook`) – GitHub leitet alte Links automatisch weiter. Danach in dieser README die Links anpassen.
+- **Keine fremden Marken** in Texten, Screenshots, Store-Beschreibungen oder Werbung verwenden (z. B. „besser als …“).
+- Für rechtliche Fragen (Impressum, Datenschutz, Marken) im Zweifel eine Fachperson fragen.
 
 ---
 

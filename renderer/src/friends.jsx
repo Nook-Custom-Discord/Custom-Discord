@@ -23,7 +23,7 @@ function AddFriend() {
   };
   return (
     <div style={{ padding: '22px 4px' }}>
-      <h2 style={{ margin: '0 0 6px' }}>Freund hinzufügen</h2>
+      <h2 style={{ margin: '0 0 6px' }}>Jemanden hinzufügen</h2>
       <div class="hint" style={{ marginBottom: 14 }}>Gib den Benutzernamen ein (ohne @). Deinen eigenen findest du oben rechts: <b>@{S.me.username}</b></div>
       <form onSubmit={submit} class="row" style={{ background: 'var(--bg2)', border: '1px solid var(--line2)', borderRadius: 16, padding: 6, paddingLeft: 14 }}>
         <input class="grow" style={{ background: 'none', border: 0, outline: 'none', height: 40 }} placeholder="z. B. max_mustermann" value={name} onInput={(e) => { setName(e.target.value); setMsg(null); }} autoFocus />
@@ -156,7 +156,7 @@ function ActiveNow() {
   }
   return (
     <div class="active-now">
-      <h3>Gerade aktiv</h3>
+      <h3>Was gerade läuft</h3>
       {cards.length ? (
         cards
       ) : (
@@ -192,16 +192,16 @@ export function FriendsView() {
     let label;
     if (tab === 'online') {
       rows = filter(online).sort(sortName).map((id) => <FriendRow uid={id} type="friend" />);
-      label = `Online — ${online.length}`;
+      label = `${online.length} online`;
     } else if (tab === 'all') {
       rows = filter(friends).sort(sortName).map((id) => <FriendRow uid={id} type="friend" />);
-      label = `Alle Freunde — ${friends.length}`;
+      label = `${friends.length} ${friends.length === 1 ? 'Freund' : 'Freunde'}`;
     } else if (tab === 'pending') {
       rows = pending.filter(([id]) => filter([id]).length).map(([id, t]) => <FriendRow uid={id} type={t} />);
-      label = `Ausstehend — ${pending.length}`;
+      label = `${pending.length} ${pending.length === 1 ? 'Anfrage' : 'Anfragen'}`;
     } else {
       rows = filter(blocked).map((id) => <FriendRow uid={id} type="blocked" />);
-      label = `Blockiert — ${blocked.length}`;
+      label = `${blocked.length} blockiert`;
     }
     content = (
       <>
@@ -237,12 +237,14 @@ export function FriendsView() {
           <button class={`ftab ${tab === 'online' ? 'active' : ''}`} onClick={() => setTab('online')}>Online</button>
           <button class={`ftab ${tab === 'all' ? 'active' : ''}`} onClick={() => setTab('all')}>Alle</button>
           <button class={`ftab ${tab === 'pending' ? 'active' : ''}`} onClick={() => setTab('pending')}>
-            Ausstehend {incoming > 0 && <span class="badge">{incoming}</span>}
+            Anfragen {incoming > 0 && <span class="badge">{incoming}</span>}
           </button>
           <button class={`ftab ${tab === 'blocked' ? 'active' : ''}`} onClick={() => setTab('blocked')}>Blockiert</button>
-          <button class={`ftab add ${tab === 'add' ? 'active' : ''}`} onClick={() => setTab('add')}>Freund hinzufügen</button>
         </div>
         <div class="tools">
+          <button class={`btn sm ${tab === 'add' ? '' : 'ghost'}`} onClick={() => setTab(tab === 'add' ? 'online' : 'add')}>
+            <Icon name="userPlus" /> Hinzufügen
+          </button>
           <button class="ibtn" data-tip="Neue Gruppe" onClick={() => openModal('createGroup')}>
             <Icon name="plus" />
           </button>
