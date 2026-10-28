@@ -2,7 +2,7 @@
 
 **Herunterladen:** unten bei *Assets*
 - **Windows:** `Nook-Setup-1.4.2.exe` – beim ersten Start evtl. SmartScreen → *Weitere Informationen* → *Trotzdem ausführen*
-- **Mac:** `Nook-1.4.2-mac.dmg` – Nook in „Programme“ ziehen, dann *Rechtsklick → Öffnen → Öffnen*. Bei „beschädigt“ einmal im Terminal: `xattr -cr /Applications/Nook.app`
+- **Mac:** `Nook-1.4.2-mac.dmg` (wird nachgereicht, falls sie noch fehlt) – Nook in „Programme“ ziehen, dann *Rechtsklick → Öffnen → Öffnen*. Bei „beschädigt“ einmal im Terminal: `xattr -cr /Applications/Nook.app`
 
 ### Neu
 - **Neues Design im Apple-Stil:** neutrales Graphit, feine Linien, weniger Schatten, viel Ruhe

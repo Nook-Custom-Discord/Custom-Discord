@@ -2,11 +2,18 @@ name: Build & Release
 
 # Release entsteht durch einen Versions-Tag (git tag v1.3.0 && git push --tags)
 # oder per Hand unter Actions → „Build & Release“ → Run workflow: dann wird der Tag
-# aus der Version in package.json selbst angelegt.
+# aus der Version in package.json selbst angelegt. Dort lässt sich auch nur ein System bauen –
+# ein späterer Lauf für das andere System hängt seine Datei an denselben Release an.
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Welche Systeme bauen?'
+        type: choice
+        options: [beide, windows, mac]
+        default: beide
 
 permissions:
   contents: write
@@ -16,11 +23,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            target: --win
-          - os: macos-latest
-            target: --mac
+        include: ${{ fromJSON(inputs.platforms == 'windows' && '[{"os":"windows-latest","target":"--win"}]' || inputs.platforms == 'mac' && '[{"os":"macos-latest","target":"--mac"}]' || '[{"os":"windows-latest","target":"--win"},{"os":"macos-latest","target":"--mac"}]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +43,7 @@ jobs:
             dist/*.exe
             dist/*.dmg
 
-  # ein gemeinsamer Release für beide Systeme (erst wenn beide Builds fertig sind)
+  # ein gemeinsamer Release für alle gebauten Systeme (erst wenn alle Builds fertig sind)
   release:
     needs: build
     runs-on: ubuntu-latest
