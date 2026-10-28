@@ -1,6 +1,6 @@
 {
   "name": "nook",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Private Chat-, Sprach- und Stream-App für deine Freundesgruppe",
   "main": "main.js",
   "scripts": {

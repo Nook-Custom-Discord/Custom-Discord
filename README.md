@@ -24,8 +24,8 @@ Die neueste Version gibt es unter **[Releases](https://github.com/Nook-Custom-Di
 
 | System  | Datei | Hinweis |
 |---------|-------|---------|
-| Windows | `Nook-Setup-1.4.1.exe` | Beim ersten Start meckert evtl. der SmartScreen („Unbekannter Herausgeber") → **Weitere Informationen → Trotzdem ausführen**. |
-| macOS   | `Nook-1.4.1-mac.dmg` | Da die App nicht bei Apple registriert ist: Nook in „Programme" ziehen, dann **Rechtsklick → Öffnen → Öffnen**. Falls „beschädigt" angezeigt wird, im Terminal einmal `xattr -cr /Applications/Nook.app` ausführen. |
+| Windows | `Nook-Setup-1.4.2.exe` | Beim ersten Start meckert evtl. der SmartScreen („Unbekannter Herausgeber") → **Weitere Informationen → Trotzdem ausführen**. |
+| macOS   | `Nook-1.4.2-mac.dmg` | Da die App nicht bei Apple registriert ist: Nook in „Programme" ziehen, dann **Rechtsklick → Öffnen → Öffnen**. Falls „beschädigt" angezeigt wird, im Terminal einmal `xattr -cr /Applications/Nook.app` ausführen. |
 
 ### Wie bekommen meine Freunde die App?
 

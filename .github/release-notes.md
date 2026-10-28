@@ -1,19 +1,20 @@
-## Nook 1.4.1 – eigene Nook-Optik
+## Nook 1.4.2 – ruhiges, edles Design
 
 **Herunterladen:** unten bei *Assets*
-- **Windows:** `Nook-Setup-1.4.1.exe` – beim ersten Start evtl. SmartScreen → *Weitere Informationen* → *Trotzdem ausführen*
-- **Mac:** `Nook-1.4.1-mac.dmg` – Nook in „Programme“ ziehen, dann *Rechtsklick → Öffnen → Öffnen*. Bei „beschädigt“ einmal im Terminal: `xattr -cr /Applications/Nook.app`
+- **Windows:** `Nook-Setup-1.4.2.exe` – beim ersten Start evtl. SmartScreen → *Weitere Informationen* → *Trotzdem ausführen*
+- **Mac:** `Nook-1.4.2-mac.dmg` – Nook in „Programme“ ziehen, dann *Rechtsklick → Öffnen → Öffnen*. Bei „beschädigt“ einmal im Terminal: `xattr -cr /Applications/Nook.app`
 
 ### Neu
-- **Anruf-Insel:** Im Anruf schwebt oben in der Mitte eine Kapsel mit Kanal, wer spricht, Kamera, Bildschirm, Klangbox und Auflegen
-- **Profil-Kapsel oben rechts:** Mikro, Ton und Einstellungen immer griffbereit neben deinem Profil
-- **Chats:** neue Liste mit Freunde-Kachel und Filtern (Alle, Ungelesen, Gruppen)
-- **Freunde:** Online, Alle, Anfragen, Blockiert – „Hinzufügen“ oben rechts, „Was gerade läuft“
-- **Neue Profilkarte:** schwebendes Banner, Avatar mittig, Infos in Kacheln
-- Neue Begriffe: Auren, Profil-Szenen, Namensbänder, Sets, Klangbox, Mega-Reaktion
-- „Neue Nachrichten“ und Erwähnungen in deiner Akzentfarbe
+- **Neues Design im Apple-Stil:** neutrales Graphit, feine Linien, weniger Schatten, viel Ruhe
+- **Neue Farben:** Blau als Standard-Akzent, Auswahl aus den Apple-Systemfarben – keine grellen Verläufe und Leuchtränder mehr
+- **Nachrichten:** eigene Blasen klar in deiner Akzentfarbe wie bei iMessage
+- **Obere Leiste & Anruf-Insel:** schlicht, ohne Kapsel-Rahmen; die Insel ist neutral, nur der Pegel leuchtet grün
+- **Listen & Menüs:** Auswahl wie unter macOS, Chats- und Freundesliste aufgeräumt
+- **Profilkarte:** Banner läuft weich in die Karte über
+- **Schrift:** Inter (auf dem Mac SF) mit leichteren Stärken
+- **Neuer Hintergrund „Graphit“**, helles Theme „Hell“ überarbeitet
+- Wer noch das alte Standard-Orange hatte, wird einmalig umgestellt – selbst gewählte Farben bleiben
 
-### Aus 1.4.0
-- Headset-Fixes (Mikro-Lautstärke bleibt, Medientasten gehen an Spotify & Co., Headset-Wechsel im Anruf)
-- 14 Live-Profil-Szenen, 6 Live-Auren, 6 Live-Sets
-- Glas über deinen Apps auch in Bildschirmübertragungen sichtbar
+### Aus 1.4.1
+- Anruf-Insel, Profil-Kapsel oben rechts, neue Chats-Liste mit Filtern, neue Freunde-Ansicht
+- Headset-Fixes, Live-Profil-Szenen und Live-Auren
