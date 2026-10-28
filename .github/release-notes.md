@@ -1,19 +1,19 @@
-## Nook 1.4.0 – Live-Animationen & Headset-Fixes
+## Nook 1.4.1 – eigene Nook-Optik
 
 **Herunterladen:** unten bei *Assets*
-- **Windows:** `Nook-Setup-1.4.0.exe` – beim ersten Start evtl. SmartScreen → *Weitere Informationen* → *Trotzdem ausführen*
-- **Mac:** `Nook-1.4.0-mac.dmg` – Nook in „Programme“ ziehen, dann *Rechtsklick → Öffnen → Öffnen*. Bei „beschädigt“ einmal im Terminal: `xattr -cr /Applications/Nook.app`
-
-### Headset
-- Nook verstellt nicht mehr die Mikrofon-Lautstärke deines Headsets im System
-- Play/Pause-Tasten am Headset steuern wieder Spotify & Co. statt Nook
-- Nook gibt das Audiogerät nach Benachrichtigungstönen wieder frei (kein Dauer-Rauschen/Knacken bei Bluetooth)
-- Headset im Anruf an- oder abstecken: Mikrofon und Ton wechseln automatisch mit
-- „Sprache & Video“ öffnet das Mikrofon nicht mehr unnötig (Bluetooth bleibt im guten Ton-Modus)
+- **Windows:** `Nook-Setup-1.4.1.exe` – beim ersten Start evtl. SmartScreen → *Weitere Informationen* → *Trotzdem ausführen*
+- **Mac:** `Nook-1.4.1-mac.dmg` – Nook in „Programme“ ziehen, dann *Rechtsklick → Öffnen → Öffnen*. Bei „beschädigt“ einmal im Terminal: `xattr -cr /Applications/Nook.app`
 
 ### Neu
-- **14 Live-Profil-Effekte** (Feuerwerk, Nordlicht, Galaxienwirbel, Blitzsturm, Sakura-Wind, Matrix-Code, Konfetti-Kanone …) und **6 Live-Avatar-Dekorationen** (Flammenkranz, Lichtorbit, Plasmaring, Sternenwirbel, Blütenwirbel, Eiskristallkranz) – flüssig mit Leuchten, Schwerkraft und Tiefe
-- **6 Live-Pakete:** Inferno, Feuerwerk, Gewitter, Kosmos, Hanami, Polarnacht
-- **Glas über deinen Apps** ist jetzt auch in Bildschirmübertragungen sichtbar (Einstellung „In Bildschirmübertragungen sichtbar“)
+- **Anruf-Insel:** Im Anruf schwebt oben in der Mitte eine Kapsel mit Kanal, wer spricht, Kamera, Bildschirm, Klangbox und Auflegen
+- **Profil-Kapsel oben rechts:** Mikro, Ton und Einstellungen immer griffbereit neben deinem Profil
+- **Chats:** neue Liste mit Freunde-Kachel und Filtern (Alle, Ungelesen, Gruppen)
+- **Freunde:** Online, Alle, Anfragen, Blockiert – „Hinzufügen“ oben rechts, „Was gerade läuft“
+- **Neue Profilkarte:** schwebendes Banner, Avatar mittig, Infos in Kacheln
+- Neue Begriffe: Auren, Profil-Szenen, Namensbänder, Sets, Klangbox, Mega-Reaktion
+- „Neue Nachrichten“ und Erwähnungen in deiner Akzentfarbe
 
-Alles aus 1.3.0 ist natürlich dabei: neue Oberfläche, Liquid Glass mit „Glas anpassen“, Hintergründe.
+### Aus 1.4.0
+- Headset-Fixes (Mikro-Lautstärke bleibt, Medientasten gehen an Spotify & Co., Headset-Wechsel im Anruf)
+- 14 Live-Profil-Szenen, 6 Live-Auren, 6 Live-Sets
+- Glas über deinen Apps auch in Bildschirmübertragungen sichtbar
