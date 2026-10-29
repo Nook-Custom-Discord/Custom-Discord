@@ -48,7 +48,8 @@
         try {
           server = localStorage.getItem('nook.server');
         } catch (e) {}
-        if (location.protocol !== 'file:' || !server) return local();
+        // Desktop-App (file:) und iPhone-App (capacitor:) holen die Oberfläche vom Server, die Web-Version hat sie schon
+        if (/^https?:$/.test(location.protocol) || !server) return local();
         var timer = setTimeout(local, 3500);
         fetch(server + '/api/ui')
           .then(function (r) {

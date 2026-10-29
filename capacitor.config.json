@@ -1,0 +1,10 @@
+{
+  "appId": "app.nook.client",
+  "appName": "Nook",
+  "webDir": "mobile-www",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#100e17",
+    "limitsNavigationsToAppBoundDomains": false
+  }
+}

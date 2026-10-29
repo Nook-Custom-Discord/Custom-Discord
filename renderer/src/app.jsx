@@ -21,7 +21,7 @@ import { syncGlass, toggleGlass } from './glass';
 // ---------- Login ----------
 function Login() {
   const [mode, setMode] = useState('login');
-  const [server, setServer] = useState(S.serverUrl || (isElectron ? 'http://localhost:3500' : location.origin));
+  const [server, setServer] = useState(S.serverUrl || (isElectron ? 'http://localhost:3500' : /^https?:$/.test(location.protocol) ? location.origin : ''));
   const [username, setUsername] = useState('');
   const [displayName0, setDisplayName] = useState('');
   const [password, setPassword] = useState('');

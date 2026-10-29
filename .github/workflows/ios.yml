@@ -1,0 +1,30 @@
+name: iPhone-App bauen
+
+# Start per Hand: Actions → „iPhone-App bauen" → Run workflow.
+# Ergebnis: Nook-iPhone-<version>.ipa unten beim Lauf unter „Artifacts".
+# Installation aufs iPhone mit Sideloadly (Windows) und der eigenen Apple-ID – siehe IPHONE.md.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run mobile:prepare
+      - run: npx cap add ios
+      - run: npx cap sync ios
+      - run: bash scripts/ios-build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nook-iPhone
+          path: dist/*.ipa

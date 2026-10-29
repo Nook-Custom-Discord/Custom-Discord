@@ -12,7 +12,8 @@
     "dist:win": "npm run build:ui && electron-builder --win --publish never",
     "dist:mac": "npm run build:ui && electron-builder --mac --publish never",
     "dist:linux": "npm run build:ui && electron-builder --linux --publish never",
-    "deploy": "npm run build:ui && node scripts/deploy-ui.js"
+    "deploy": "npm run build:ui && node scripts/deploy-ui.js",
+    "mobile:prepare": "npm run build:ui && node scripts/prepare-mobile.js"
   },
   "author": "Alessandro",
   "license": "MIT",
@@ -21,6 +22,9 @@
     "socket.io": "^4.8.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/ios": "^8.6.0",
     "electron": "^45.0.0",
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",

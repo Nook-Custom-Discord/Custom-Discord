@@ -13,7 +13,8 @@ export function bindVoice(v) {
 // ---------- URLs ----------
 export function normServer(url) {
   url = String(url || '').trim().replace(/\/+$/, '');
-  if (url && !/^https?:\/\//.test(url)) url = 'http://' + url;
+  // Domainnamen (z. B. …ts.net) ohne Angabe bekommen https – das iPhone erlaubt kein unverschlüsseltes http
+  if (url && !/^https?:\/\//.test(url)) url = (/[a-z]/i.test(url.split(':')[0]) && url.split(':')[0].includes('.') && !/:\d+$/.test(url) ? 'https://' : 'http://') + url;
   if (url && !/:\d+$/.test(url.replace(/^https?:\/\//, '')) && !/^https:/.test(url)) url += ':3500';
   return url;
 }
@@ -223,7 +224,7 @@ export function checkUi(v) {
   if (!v) return;
   const loaded = window.__NOOK_UI_V;
   // Web-Version: die Seite kam direkt vom Server -> aktuelle Version merken
-  if (location.protocol !== 'file:' && (!loaded || loaded === 'local')) {
+  if (/^https?:$/.test(location.protocol) && (!loaded || loaded === 'local')) {
     window.__NOOK_UI_V = v;
     return;
   }
