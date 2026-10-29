@@ -177,9 +177,15 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
   }
 
   // ---------- Voice ----------
+  // iPhone-App: Bei gesperrtem Bildschirm kann die Verbindung zum Server kurz abreißen, während der Anruf
+  // (Ton läuft direkt zwischen den Geräten) weiterläuft. Solche Nutzer bleiben dann als „abwesend“ im Kanal.
+  const awayTimers = new Map();
+  const AWAY_MAX_MS = 3 * 60 * 60 * 1000;
   function leaveVoice(uid) {
     const vs = voice.get(uid);
     if (!vs) return;
+    clearTimeout(awayTimers.get(uid));
+    awayTimers.delete(uid);
     voice.delete(uid);
     const ch = db.channels[vs.channelId];
     emitTo(audience(ch), 'voiceState', { userId: uid, state: null });
@@ -1320,7 +1326,7 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
     },
 
     // ----- Voice -----
-    voiceJoin(uid, { channelId, muted = false, deafened = false }, socket) {
+    voiceJoin(uid, { channelId, muted = false, deafened = false, keepAlive = false, resume = false }, socket) {
       const ch = db.channels[channelId];
       need(canView(ch, uid), 'Kein Zugriff');
       need(['voice', 'stage', 'dm', 'group'].includes(ch.type), 'Kein Sprachkanal');
@@ -1329,6 +1335,18 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
       if (ch.type === 'dm') need(!blockedEither(...ch.recipients), 'Anruf nicht möglich');
       const inChan = [...voice.entries()].filter(([id, v]) => v.channelId === channelId && id !== uid);
       if (ch.userLimit && s && !has(s, uid, P.MOVE_MEMBERS)) need(inChan.length < ch.userLimit, 'Der Kanal ist voll');
+      // iPhone kommt nach dem Entsperren zurück: im Kanal bleiben, nur die neue Verbindung merken
+      const prevState = voice.get(uid);
+      if (resume && prevState?.keepAlive && prevState.channelId === channelId) {
+        clearTimeout(awayTimers.get(uid));
+        awayTimers.delete(uid);
+        prevState.socketId = socket.id;
+        prevState.away = false;
+        prevState.muted = !!muted;
+        prevState.deafened = !!deafened;
+        emitTo(audience(ch), 'voiceState', { userId: uid, state: prevState });
+        return { peers: inChan.map(([id]) => id), resumed: true };
+      }
       if (voice.has(uid)) {
         const old = voice.get(uid);
         if (old.socketId !== socket.id) io.to(old.socketId).emit('ev', 'voiceKicked', { reason: 'Auf anderem Gerät verbunden' });
@@ -1347,6 +1365,8 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
         screenStreamId: null,
         screenInfo: null,
         joinedAt: Date.now(),
+        keepAlive: !!keepAlive,
+        away: false,
         suppressed: ch.type === 'stage' && !(s && has(s, uid, P.MUTE_MEMBERS)),
       };
       voice.set(uid, state);
@@ -1404,6 +1424,13 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
       need(vs);
       vs.requestToSpeak = Date.now();
       emitTo(audience(db.channels[vs.channelId]), 'voiceState', { userId: uid, state: vs });
+      return true;
+    },
+    // Ein Teilnehmer meldet: Die direkte Verbindung zu einem „abwesenden“ iPhone ist tot -> aus dem Kanal nehmen
+    voicePeerLost(uid, { userId }) {
+      const mine = voice.get(uid);
+      const theirs = voice.get(userId);
+      if (mine && theirs?.away && mine.channelId === theirs.channelId) leaveVoice(userId);
       return true;
     },
     rtc(uid, { to, data }) {
@@ -1486,7 +1513,14 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
     socket.on('disconnect', () => {
       sockets.get(uid)?.delete(socket);
       const vs = voice.get(uid);
-      if (vs && vs.socketId === socket.id) leaveVoice(uid);
+      if (vs && vs.socketId === socket.id) {
+        if (vs.keepAlive) {
+          vs.away = true;
+          emitTo(audience(db.channels[vs.channelId]), 'voiceState', { userId: uid, state: vs });
+          clearTimeout(awayTimers.get(uid));
+          awayTimers.set(uid, setTimeout(() => voice.get(uid)?.away && leaveVoice(uid), AWAY_MAX_MS));
+        } else leaveVoice(uid);
+      }
       if (!sockets.get(uid)?.size) {
         if (db.users[uid]?.activity) {
           db.users[uid].activity = null;

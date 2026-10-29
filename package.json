@@ -1,6 +1,6 @@
 {
   "name": "nook",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Private Chat-, Sprach- und Stream-App für deine Freundesgruppe",
   "main": "main.js",
   "scripts": {
@@ -28,6 +28,7 @@
     "electron": "^45.0.0",
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
+    "nook-call": "file:native/nook-call",
     "preact": "^10.29.8",
     "socket.io-client": "^4.8.4"
   },

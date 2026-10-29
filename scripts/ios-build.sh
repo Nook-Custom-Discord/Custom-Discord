@@ -48,9 +48,18 @@ for f in "$ICONSET"/*.png; do cp "$TMP/icon-1024.png" "$f"; done
 echo "==> Bauen (ohne Signatur)"
 cd "$ROOT/ios/App"
 if [ -d App.xcworkspace ]; then TARGET=(-workspace App.xcworkspace); else TARGET=(-project App.xcodeproj); fi
-xcodebuild "${TARGET[@]}" -scheme App -configuration Release -sdk iphoneos \
+# Komplettes Protokoll landet in dist/build-log.txt (wird bei GitHub mit hochgeladen)
+LOG="$ROOT/dist/build-log.txt"
+if ! xcodebuild "${TARGET[@]}" -scheme App -configuration Release -sdk iphoneos \
   -destination 'generic/platform=iOS' -archivePath "$TMP/App.xcarchive" archive \
-  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tail -25
+  -skipPackagePluginValidation -skipMacroValidation \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" > "$LOG" 2>&1; then
+  echo "!!! Bauen fehlgeschlagen – Fehler:"
+  grep -E "error:|Error:|fatal" "$LOG" | sort -u | head -60
+  tail -30 "$LOG"
+  exit 1
+fi
+tail -5 "$LOG"
 
 echo "==> .ipa verpacken"
 mkdir -p "$TMP/ipa/Payload"

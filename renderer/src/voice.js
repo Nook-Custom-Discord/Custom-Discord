@@ -18,6 +18,17 @@ export const QUALITY = {
 // Handy (iPhone-App, Handy-Browser): andere Kamera-Einstellungen, kein Bildschirm teilen
 export const IS_PHONE = location.protocol === 'capacitor:' || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 export const CAN_SHARE_SCREEN = !!navigator.mediaDevices?.getDisplayMedia && !IS_PHONE;
+// iPhone-App mit nativer Sprach-Erweiterung: Mikro und Ton laufen dort auch bei gesperrtem Bildschirm weiter.
+// Die Sprache geht dann über eine eigene Verbindung („Spur a“), Kamera und Streams wie bisher über die Web-Ansicht.
+const NC = (() => {
+  try {
+    const C = window.Capacitor;
+    return C?.isPluginAvailable?.('NookCall') ? C.registerPlugin('NookCall') : null;
+  } catch {
+    return null;
+  }
+})();
+export const NATIVE_CALL = !!NC;
 
 export const CAMERA_QUALITY = {
   '480p': { w: 854, h: 480, fps: 30, br: 1_000_000 },
@@ -81,6 +92,16 @@ class VoiceEngine {
     this.focus = null;
     this.screenStats = {}; // uid -> { w, h, fps, kbps } für angesehene Streams
     this.buf = new Float32Array(512);
+    this.apeers = new Map(); // uid -> { pc } Sprachverbindungen zu iPhones mit nativer Erweiterung
+    this.laneQ = {};
+    if (NC) {
+      NC.addListener('signal', (d) => {
+        if (!this.channelId || !d?.uid) return;
+        if (d.desc) this.signal(d.uid, { lane: 'a', desc: d.desc, fresh: !!d.fresh });
+        else if (d.cand) this.signal(d.uid, { lane: 'a', cand: d.cand });
+      });
+      NC.addListener('state', () => update());
+    }
 
     window.addEventListener('keydown', (e) => {
       if (prefs.inputMode === 'ptt' && e.code === prefs.pttKey && !e.repeat && !isTyping(e)) {
@@ -109,7 +130,7 @@ class VoiceEngine {
     try {
       if (this.ctx.state !== 'running') await this.ctx.resume().catch(() => {});
       const mic = this.micRaw?.getAudioTracks()[0];
-      if (!mic || mic.readyState === 'ended' || mic.muted) await this.startMic();
+      if (!NATIVE_CALL && (!mic || mic.readyState === 'ended' || mic.muted)) await this.startMic();
       const cam = this.camStream?.getVideoTracks()[0];
       if (cam && (cam.readyState === 'ended' || cam.muted)) await this.restartCamera();
       // Hängengebliebene Verbindungen neu aufbauen
@@ -133,10 +154,11 @@ class VoiceEngine {
       if (this.channelId) await this.leave(true);
       stopRing();
       await this.setupAudio();
+      if (NC) await NC.start({ iceServers: S.iceServers || [], muted: this.muted, deafened: this.deafened });
       const ch = S.channels[channelId];
       this.channelId = channelId;
       this.serverId = serverIdOf(ch);
-      const res = await rpc('voiceJoin', { channelId, muted: this.muted, deafened: this.deafened });
+      const res = await rpc('voiceJoin', { channelId, muted: this.muted, deafened: this.deafened, keepAlive: NATIVE_CALL });
       for (const uid of res.peers) this.createPeer(uid);
       sfx('join');
       this.startLoops();
@@ -152,12 +174,30 @@ class VoiceEngine {
   async rejoin() {
     const ch = this.channelId;
     if (!ch) return;
+    if (NC) return this.rejoinNative(ch);
     for (const uid of [...this.peers.keys()]) this.closePeer(uid);
     try {
       const res = await rpc('voiceJoin', { channelId: ch, muted: this.muted, deafened: this.deafened });
       if (this.camStream) await rpc('voiceUpdate', { video: true, cameraStreamId: this.camStream.id });
       if (this.screenStream) await rpc('voiceUpdate', { screenStreamId: this.screenStream.id, screenInfo: this.screenInfo });
       for (const uid of res.peers) this.createPeer(uid);
+    } catch {
+      this.leave(true);
+    }
+  }
+
+  // iPhone nach dem Entsperren: Die Sprache (nativ) lief weiter – nur die Video-Verbindungen neu aufbauen
+  async rejoinNative(ch) {
+    for (const uid of [...this.peers.keys()]) this.closeMainPeer(uid);
+    try {
+      const res = await rpc('voiceJoin', { channelId: ch, muted: this.muted, deafened: this.deafened, keepAlive: true, resume: true });
+      if (this.camStream) await rpc('voiceUpdate', { video: true, cameraStreamId: this.camStream.id });
+      const { uids = [] } = await NC.listPeers().catch(() => ({}));
+      for (const uid of uids) if (!res.peers.includes(uid)) NC.closePeer({ uid }).catch(() => {});
+      for (const uid of res.peers) {
+        this.signal(uid, { reset: true });
+        this.createPeer(uid);
+      }
     } catch {
       this.leave(true);
     }
@@ -180,6 +220,7 @@ class VoiceEngine {
     this.focus = null;
     this.stopLoops();
     this.teardownAudio();
+    NC?.stop().catch(() => {});
     if (!silent) sfx('leave');
     else sfx('hangup');
     update();
@@ -209,7 +250,8 @@ class VoiceEngine {
     this.sfxGain.connect(this.master);
     this.sendStream = this.dest.stream;
     this.micTrack = this.sendStream.getAudioTracks()[0];
-    await this.startMic();
+    // Native Erweiterung nimmt das Mikro selbst auf – die Web-Ansicht darf es dann nicht zusätzlich öffnen
+    if (!NATIVE_CALL) await this.startMic();
   }
 
   async startMic() {
@@ -246,7 +288,7 @@ class VoiceEngine {
   // Geräte haben sich geändert (Headset an/aus): Mikro neu öffnen, wenn es weg ist oder – bei „Standard“ –
   // das Standardgerät gewechselt hat; gewählte Ausgabe neu setzen, sobald sie wieder da ist
   async onDeviceChange() {
-    if (!this.ctx) return;
+    if (!this.ctx || NATIVE_CALL) return;
     const devs = await navigator.mediaDevices.enumerateDevices().catch(() => []);
     const track = this.micRaw?.getAudioTracks()[0];
     const def = devs.find((d) => d.kind === 'audioinput' && d.deviceId === 'default')?.label;
@@ -315,6 +357,7 @@ class VoiceEngine {
 
   tick() {
     if (!this.ctx) return;
+    if (NC) return this.tickNative();
     const now = performance.now();
     const lvl = this.micRaw ? dbFromAnalyser(this.analyser, this.buf) : -100;
     this.selfLevel = lvl;
@@ -346,6 +389,28 @@ class VoiceEngine {
       }
     }
     if (changed.size) update();
+  }
+
+  // Sprechen-Anzeige mit der nativen Erweiterung (Pegel kommen von dort)
+  async tickNative() {
+    const now = performance.now();
+    if (this.levelBusy || now - (this.levelAt || 0) < 250) return;
+    this.levelBusy = true;
+    this.levelAt = now;
+    try {
+      const { me = 0, peers = {} } = await NC.levels();
+      const changed = new Set();
+      const set = (uid, on) => {
+        if (on === this.speaking.has(uid)) return;
+        on ? this.speaking.add(uid) : this.speaking.delete(uid);
+        changed.add(uid);
+      };
+      this.selfLevel = me > 0 ? 20 * Math.log10(me) : -100;
+      set(S.me.id, me > 0.02 && !this.muted && !this.deafened && !this.isForcedMuted());
+      for (const [uid, l] of Object.entries(peers)) set(uid, l > 0.015 && !prefs.localMutes[uid]);
+      if (changed.size) update();
+    } catch {}
+    this.levelBusy = false;
   }
 
   async collectStats() {
@@ -384,8 +449,10 @@ class VoiceEngine {
     const pc = new RTCPeerConnection({ iceServers: S.iceServers, bundlePolicy: 'max-bundle' });
     const peer = { uid, pc, polite: S.me.id > uid, makingOffer: false, ignoreOffer: false, cam: [], screen: [] };
     this.peers.set(uid, peer);
-    // addTrack (statt addTransceiver), damit der Sender beim Annehmen eines Angebots wiederverwendet wird
-    pc.addTrack(this.micTrack, this.sendStream);
+    // addTrack (statt addTransceiver), damit der Sender beim Annehmen eines Angebots wiederverwendet wird.
+    // iPhone mit nativer Erweiterung: Sprache läuft über eine eigene native Verbindung
+    if (NC) NC.createPeer({ uid }).catch(() => {});
+    else pc.addTrack(this.micTrack, this.sendStream);
     if (this.camStream) this.addCamTo(peer);
     pc.onnegotiationneeded = async () => {
       try {
@@ -419,15 +486,106 @@ class VoiceEngine {
   }
 
   closePeer(uid) {
+    this.closeMainPeer(uid);
+    this.closeLaneA(uid);
+    NC?.closePeer({ uid }).catch(() => {});
+    for (const k of Object.keys(this.audioNodes)) if (k.startsWith(uid + ':')) this.dropAudio(k);
+    delete this.remote[uid];
+    delete this.laneQ[uid];
+    this.speaking.delete(uid);
+  }
+
+  // Nur die normale Verbindung (Video, Streams, Sprache von PCs) – die native iPhone-Sprache bleibt
+  closeMainPeer(uid) {
     const p = this.peers.get(uid);
     if (p) p.pc.close();
     this.peers.delete(uid);
-    for (const k of Object.keys(this.audioNodes)) if (k.startsWith(uid + ':')) this.dropAudio(k);
-    delete this.remote[uid];
+    this.dropAudio(uid + ':screen');
+    if (this.remote[uid]) {
+      delete this.remote[uid].camera;
+      delete this.remote[uid].screen;
+    }
     this.watching.delete(uid);
     this.viewers.delete(uid);
-    this.speaking.delete(uid);
     if (this.focus?.uid === uid) this.focus = null;
+  }
+
+  // ---------- Spur a: Sprache von/zu einem iPhone mit nativer Erweiterung (das iPhone bietet immer an) ----------
+  closeLaneA(uid) {
+    const ap = this.apeers.get(uid);
+    if (!ap) return;
+    clearTimeout(ap.failTimer);
+    ap.pc.close();
+    this.apeers.delete(uid);
+  }
+
+  createLaneA(uid) {
+    const pc = new RTCPeerConnection({ iceServers: S.iceServers, bundlePolicy: 'max-bundle' });
+    const ap = { pc, failTimer: null };
+    this.apeers.set(uid, ap);
+    pc.onicecandidate = (e) => e.candidate && this.signal(uid, { lane: 'a', cand: e.candidate.toJSON() });
+    pc.ontrack = (e) => {
+      if (e.track.kind !== 'audio') return;
+      const stream = e.streams[0] || new MediaStream([e.track]);
+      const r = (this.remote[uid] = this.remote[uid] || {});
+      r.mic = stream;
+      this.attachAudio(uid, 'mic', stream);
+      update();
+    };
+    pc.onconnectionstatechange = () => {
+      const st = pc.connectionState;
+      if (st === 'connected') {
+        clearTimeout(ap.failTimer);
+        ap.failTimer = null;
+        for (const s of pc.getSenders()) {
+          const p = s.getParameters();
+          if (p.encodings?.[0]) {
+            p.encodings[0].maxBitrate = 128000;
+            s.setParameters(p).catch(() => {});
+          }
+        }
+      }
+      // iPhone ist weg (App beendet, kein Netz) und meldet sich nicht mehr beim Server -> aus dem Kanal nehmen
+      if ((st === 'failed' || st === 'disconnected') && !ap.failTimer) {
+        ap.failTimer = setTimeout(() => {
+          ap.failTimer = null;
+          if (this.apeers.get(uid) === ap && ['failed', 'disconnected'].includes(pc.connectionState) && S.voice[uid]?.away) rpc('voicePeerLost', { userId: uid }).catch(() => {});
+        }, 25000);
+      }
+      update();
+    };
+    return ap;
+  }
+
+  onLaneA(from, data) {
+    const run = async () => {
+      if (!this.channelId) return;
+      if (data.desc?.type === 'offer') {
+        let ap = this.apeers.get(from);
+        if (ap && data.fresh) {
+          this.closeLaneA(from);
+          ap = null;
+        }
+        if (!ap) ap = this.createLaneA(from);
+        await ap.pc.setRemoteDescription(data.desc);
+        for (const t of ap.pc.getTransceivers()) {
+          if (t.receiver.track?.kind !== 'audio' || t.sender.track === this.micTrack) continue;
+          await t.sender.replaceTrack(this.micTrack);
+          t.direction = 'sendrecv';
+          t.sender.setStreams?.(this.sendStream);
+        }
+        await ap.pc.setLocalDescription(await ap.pc.createAnswer());
+        this.signal(from, { lane: 'a', desc: ap.pc.localDescription });
+      } else if (data.desc?.type === 'answer') {
+        // iPhone-Seite: Antwort an die native Erweiterung weitergeben
+        await NC?.signal({ uid: from, desc: { type: data.desc.type, sdp: data.desc.sdp } });
+      } else if (data.cand) {
+        if (NC) await NC.signal({ uid: from, cand: data.cand });
+        else await this.apeers.get(from)?.pc.addIceCandidate(data.cand).catch(() => {});
+      }
+    };
+    // Signale einer Person der Reihe nach abarbeiten (Kandidaten erst nach dem Angebot)
+    this.laneQ[from] = (this.laneQ[from] || Promise.resolve()).then(run).catch((e) => console.warn('spur a', e));
   }
 
   signal(to, data) {
@@ -436,6 +594,13 @@ class VoiceEngine {
 
   async onSignal(from, data) {
     if (!this.channelId) return;
+    if (data.lane === 'a') return this.onLaneA(from, data);
+    // iPhone baut nach dem Entsperren seine Video-Verbindung neu auf
+    if (data.reset) {
+      this.closeMainPeer(from);
+      this.createPeer(from);
+      return;
+    }
     const peer = this.peers.get(from) || this.createPeer(from);
     const pc = peer.pc;
     try {
@@ -479,7 +644,7 @@ class VoiceEngine {
     else if (e.track.kind === 'video') kind = vs?.screenStreamId && this.watching.has(uid) && !vs.cameraStreamId ? 'screen' : 'camera';
     const r = (this.remote[uid] = this.remote[uid] || {});
     r[kind] = stream;
-    if (e.track.kind === 'audio') this.attachAudio(uid, kind, stream);
+    if (e.track.kind === 'audio' && !(NC && kind === 'mic')) this.attachAudio(uid, kind, stream);
     // Nur wirklich beendete Tracks aufräumen. "muted" heißt bei Bildschirmen oft nur: gerade kein neues Bild,
     // weil sich nichts bewegt – früher verschwand der Stream dann dauerhaft.
     const cleanup = () => {
@@ -561,6 +726,10 @@ class VoiceEngine {
   }
 
   pushState() {
+    if (NC && this.channelId) {
+      NC.setMuted({ muted: this.muted || this.isForcedMuted() }).catch(() => {});
+      NC.setDeafened({ deafened: this.deafened }).catch(() => {});
+    }
     if (this.channelId) rpc('voiceUpdate', { muted: this.muted, deafened: this.deafened }).catch(() => {});
     update();
   }
@@ -783,6 +952,9 @@ class VoiceEngine {
         // vom Server entfernt
       }
       if (state?.serverMuted && !prev?.serverMuted) toast('Du wurdest von einem Moderator stummgeschaltet');
+      if (NC && this.channelId && (!!state?.serverMuted !== !!prev?.serverMuted || !!state?.suppressed !== !!prev?.suppressed)) {
+        NC.setMuted({ muted: this.muted || !!state?.serverMuted || !!state?.suppressed }).catch(() => {});
+      }
       return;
     }
     if (!this.channelId) return;

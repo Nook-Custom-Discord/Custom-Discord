@@ -35,6 +35,14 @@ wie am PC live vom Nook-Server.
   sobald PC und iPhone im selben WLAN sind.
 - **Per Hand:** einfach Schritt 3 wiederholen. Deine Nachrichten und Einstellungen bleiben erhalten.
 
+## Anrufe bei gesperrtem Bildschirm
+Ab Version 1.4.3 laufen Mikro und Ton in der iPhone-App über eine eigene native Erweiterung (`native/nook-call`)
+und gehen weiter, wenn der Bildschirm gesperrt ist oder du in eine andere App wechselst. Die Kamera pausiert dabei
+(das erlaubt iOS keiner App) und startet nach dem Entsperren von selbst wieder.
+Dafür muss auf dem PC, der den Nook-Server betreibt, ebenfalls mindestens Version 1.4.3 laufen.
+
+Falls das Bauen auf GitHub fehlschlägt: beim Lauf unten **„Build-Protokoll“** herunterladen und weiterschicken.
+
 ## Was (noch) nicht geht
 - Benachrichtigungen, wenn Nook komplett geschlossen ist (dafür bräuchte es ein bezahltes Apple-Konto).
 - Bildschirm teilen vom iPhone aus. Streams **ansehen** geht.
