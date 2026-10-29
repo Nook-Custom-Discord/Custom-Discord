@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
 import { S, update, prefs, setPref, openModal, closeModal, openPopout, openMenu, toast } from './store';
 import { act, rpc, displayName, channelTitle, serverIdOf, voiceMembers, can, P, navigate, dismissCall, avatarOf, isVideoUrl, openDM, isElectron } from './api';
-import { V, QUALITY } from './voice';
+import { V, QUALITY, IS_PHONE, CAN_SHARE_SCREEN } from './voice';
 import { Avatar, Modal, Seg, SegBox, Video, Name, Spinner, ServerIcon } from './ui';
 import { Icon } from './icons';
 import { ChatView } from './chat';
@@ -243,9 +243,16 @@ export function CallControls({ ch, compact }) {
       <button class={`round-btn ${V.camStream ? 'on' : ''}`} data-tip={V.camStream ? 'Kamera aus' : 'Kamera an'} onClick={() => V.toggleCamera()}>
         <Icon name={V.camStream ? 'video' : 'videoOff'} />
       </button>
-      <button class={`round-btn ${V.screenStream ? 'on' : ''}`} data-tip={V.screenStream ? 'Stream beenden' : 'Bildschirm teilen'} onClick={() => (V.screenStream ? V.stopScreen() : openModal('screenshare'))}>
-        <Icon name={V.screenStream ? 'screenOff' : 'screen'} />
-      </button>
+      {IS_PHONE && V.camStream && (
+        <button class="round-btn" data-tip="Kamera wechseln" onClick={() => V.flipCamera()}>
+          <Icon name="flipCam" />
+        </button>
+      )}
+      {(CAN_SHARE_SCREEN || V.screenStream) && (
+        <button class={`round-btn ${V.screenStream ? 'on' : ''}`} data-tip={V.screenStream ? 'Stream beenden' : 'Bildschirm teilen'} onClick={() => (V.screenStream ? V.stopScreen() : openModal('screenshare'))}>
+          <Icon name={V.screenStream ? 'screenOff' : 'screen'} />
+        </button>
+      )}
       <button class="round-btn" data-tip="Klangbox" onClick={(e) => openPopout(e, 'soundboard', { prefer: 'top' })}>
         <Icon name="soundboard" />
       </button>
@@ -407,9 +414,11 @@ export function CallIsland() {
       <button class={`ibtn sm ${V.camStream ? 'on' : ''}`} data-tip={V.camStream ? 'Kamera aus' : 'Kamera an'} onClick={() => V.toggleCamera()}>
         <Icon name={V.camStream ? 'video' : 'videoOff'} />
       </button>
-      <button class={`ibtn sm ${V.screenStream ? 'on' : ''}`} data-tip={V.screenStream ? 'Stream beenden' : 'Bildschirm teilen'} onClick={() => (V.screenStream ? V.stopScreen() : openModal('screenshare'))}>
-        <Icon name="screen" />
-      </button>
+      {(CAN_SHARE_SCREEN || V.screenStream) && (
+        <button class={`ibtn sm ${V.screenStream ? 'on' : ''}`} data-tip={V.screenStream ? 'Stream beenden' : 'Bildschirm teilen'} onClick={() => (V.screenStream ? V.stopScreen() : openModal('screenshare'))}>
+          <Icon name="screen" />
+        </button>
+      )}
       <button class="ibtn sm" data-tip="Klangbox" onClick={(e) => openPopout(e, 'soundboard', { prefer: 'bottom' })}>
         <Icon name="soundboard" />
       </button>

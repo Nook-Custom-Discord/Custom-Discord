@@ -373,7 +373,10 @@ export function TooltipLayer() {
   const [tip, setTip] = useState(null);
   useEffect(() => {
     let cur = null;
+    let touchAt = 0;
     const over = (e) => {
+      // Handy: iOS meldet beim Antippen ein „mouseover“ – sonst bleiben Tooltips einfach stehen
+      if (Date.now() - touchAt < 800) return;
       const el = e.target.closest?.('[data-tip]');
       if (el === cur) return;
       cur = el;
@@ -385,9 +388,15 @@ export function TooltipLayer() {
       cur = null;
       setTip(null);
     };
+    const touch = () => {
+      touchAt = Date.now();
+      out();
+    };
     document.addEventListener('mouseover', over);
     document.addEventListener('mousedown', out);
+    document.addEventListener('touchstart', touch, { passive: true, capture: true });
     return () => {
+      document.removeEventListener('touchstart', touch, { capture: true });
       document.removeEventListener('mouseover', over);
       document.removeEventListener('mousedown', out);
     };
@@ -455,11 +464,14 @@ export function useInterval(fn, ms) {
 
 export function Video({ stream, mirror, cover, muted = true }) {
   const ref = useRef();
+  // Hochkant-Bilder (Handykamera) nie abschneiden – sonst sieht man nur einen schmalen Streifen
+  const [portrait, setPortrait] = useState(false);
   useEffect(() => {
     if (ref.current && ref.current.srcObject !== stream) {
       ref.current.srcObject = stream || null;
       ref.current.play().catch(() => {});
     }
   }, [stream]);
-  return <video ref={ref} autoplay playsInline muted={muted} class={`${mirror ? 'mirror' : ''} ${cover ? 'cover' : ''}`} />;
+  const onSize = (e) => setPortrait(e.currentTarget.videoHeight > e.currentTarget.videoWidth * 1.05);
+  return <video ref={ref} autoplay playsInline muted={muted} onLoadedMetadata={onSize} onResize={onSize} class={`${mirror ? 'mirror' : ''} ${cover && !portrait ? 'cover' : ''}`} />;
 }

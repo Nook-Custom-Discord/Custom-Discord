@@ -15,6 +15,10 @@ export const QUALITY = {
   source: { label: 'Quellauflösung · 60 FPS', w: 0, h: 0, fps: 60, br: 40_000_000 },
 };
 
+// Handy (iPhone-App, Handy-Browser): andere Kamera-Einstellungen, kein Bildschirm teilen
+export const IS_PHONE = location.protocol === 'capacitor:' || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export const CAN_SHARE_SCREEN = !!navigator.mediaDevices?.getDisplayMedia && !IS_PHONE;
+
 export const CAMERA_QUALITY = {
   '480p': { w: 854, h: 480, fps: 30, br: 1_000_000 },
   '720p': { w: 1280, h: 720, fps: 30, br: 2_500_000 },
@@ -91,6 +95,29 @@ class VoiceEngine {
     window.addEventListener('blur', () => (this.pttDown = false));
     // Headset im Anruf an- oder abgesteckt -> Mikrofon/Ausgabe neu zuordnen
     navigator.mediaDevices?.addEventListener?.('devicechange', () => this.onDeviceChange());
+    // iPhone: Nach dem Entsperren / Zurückkehren in die App pausiert iOS Mikro, Kamera und Ton –
+    // hier wird alles wieder angeworfen, damit der Anruf ohne Neu-Beitreten weiterläuft
+    const wake = () => document.visibilityState === 'visible' && this.wake();
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('pageshow', wake);
+    window.addEventListener('focus', wake);
+  }
+
+  async wake() {
+    if (!this.channelId || !this.ctx || this.waking) return;
+    this.waking = true;
+    try {
+      if (this.ctx.state !== 'running') await this.ctx.resume().catch(() => {});
+      const mic = this.micRaw?.getAudioTracks()[0];
+      if (!mic || mic.readyState === 'ended' || mic.muted) await this.startMic();
+      const cam = this.camStream?.getVideoTracks()[0];
+      if (cam && (cam.readyState === 'ended' || cam.muted)) await this.restartCamera();
+      // Hängengebliebene Verbindungen neu aufbauen
+      if ([...this.peers.values()].some((p) => ['failed', 'closed'].includes(p.pc.connectionState))) await this.rejoin();
+    } finally {
+      this.waking = false;
+      update();
+    }
   }
 
   get connected() {
@@ -549,11 +576,9 @@ class VoiceEngine {
       update();
       return;
     }
-    const q = CAMERA_QUALITY[prefs.cameraQuality] || CAMERA_QUALITY['720p'];
+    const q = IS_PHONE ? CAMERA_QUALITY['720p'] : CAMERA_QUALITY[prefs.cameraQuality] || CAMERA_QUALITY['720p'];
     try {
-      const s = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: prefs.cameraDevice ? { exact: prefs.cameraDevice } : undefined, width: { ideal: q.w }, height: { ideal: q.h }, frameRate: { ideal: q.fps } },
-      });
+      const s = await navigator.mediaDevices.getUserMedia({ video: this.camConstraints(q) });
       this.camStream = s;
       this.camQ = q;
       await rpc('voiceUpdate', { video: true, cameraStreamId: s.id });
@@ -562,6 +587,35 @@ class VoiceEngine {
       toast('Kamera konnte nicht gestartet werden: ' + e.message, 'error');
     }
     update();
+  }
+
+  camConstraints(q) {
+    // Handy: Front-/Rückkamera statt Gerätewahl; keine feste Breite/Höhe, damit iOS das volle Bild im
+    // Hoch- wie im Querformat liefert (sonst wird das Hochkant-Bild auf einen schmalen Ausschnitt gezoomt)
+    if (IS_PHONE) return { facingMode: this.facing || 'user', frameRate: { ideal: 30 } };
+    return { deviceId: prefs.cameraDevice ? { exact: prefs.cameraDevice } : undefined, width: { ideal: q.w }, height: { ideal: q.h }, frameRate: { ideal: q.fps } };
+  }
+
+  // Neue Kamera-Spur in alle laufenden Verbindungen tauschen (ohne Neuverhandlung)
+  async restartCamera() {
+    if (!this.camStream) return;
+    const old = this.camStream;
+    const s = await navigator.mediaDevices.getUserMedia({ video: this.camConstraints(this.camQ || CAMERA_QUALITY['720p']) }).catch(() => null);
+    if (!s) return;
+    const track = s.getVideoTracks()[0];
+    for (const p of this.peers.values()) for (const sender of p.cam || []) await sender.replaceTrack(track).catch(() => {});
+    old.getTracks().forEach((t) => t.stop());
+    this.camStream = s;
+    update();
+  }
+
+  // Handy: zwischen Front- und Rückkamera wechseln
+  async flipCamera() {
+    this.facing = (this.facing || 'user') === 'user' ? 'environment' : 'user';
+    if (!this.camStream) return;
+    // iOS kann nicht zwei Kameras gleichzeitig öffnen -> alte vorher stoppen
+    this.camStream.getTracks().forEach((t) => t.stop());
+    await this.restartCamera();
   }
 
   addCamTo(peer) {

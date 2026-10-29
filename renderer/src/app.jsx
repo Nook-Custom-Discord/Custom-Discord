@@ -2,7 +2,7 @@ import { render } from 'preact';
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, useStore, openModal, toast } from './store';
 import { auth, connect, normServer, isElectron, navigate, channelTitle, serverIdOf, can, P, rpc, act, sortedChannels, displayName, voiceMembers, openDM, dmList } from './api';
-import { V } from './voice';
+import { V, IS_PHONE } from './voice';
 import { TopBar, HomeSidebar, ServerSidebar, MemberList } from './sidebar';
 import { ChatView, SidePanel, runSearch } from './chat';
 import { FriendsView } from './friends';
@@ -473,6 +473,24 @@ function App() {
 }
 
 window.__nook = { S, V };
+// ---------- Handy ----------
+// iOS verkleinert beim Einblenden der Tastatur nicht die Seite, sondern schiebt sie nach oben – dann
+// verschwinden Kopfzeile und Eingabefeld. Deshalb wird die Höhe der App an den sichtbaren Bereich gekoppelt.
+if (IS_PHONE) {
+  document.body.classList.add('is-phone');
+  if (location.protocol === 'capacitor:') document.body.classList.add('is-app');
+  const vv = window.visualViewport;
+  const fit = () => {
+    const h = vv ? vv.height : innerHeight;
+    document.documentElement.style.setProperty('--app-h', Math.round(h) + 'px');
+    document.body.classList.toggle('kb-open', !!vv && innerHeight - vv.height > 120);
+    if (window.scrollY || window.scrollX) window.scrollTo(0, 0);
+  };
+  vv?.addEventListener('resize', fit);
+  vv?.addEventListener('scroll', fit);
+  window.addEventListener('orientationchange', () => setTimeout(fit, 300));
+  fit();
+}
 (() => {
   let timer = null;
   let start = null;

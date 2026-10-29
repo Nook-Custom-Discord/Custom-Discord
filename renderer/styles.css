@@ -6008,7 +6008,7 @@ svg.dfx-wing.r {
     user-select: none;
   }
 }
-@media (max-width: 760px) {
+@media (max-width: 760px), (pointer: coarse) and (max-height: 520px) {
   .mobile-only {
     display: inline-grid !important;
   }
@@ -7598,7 +7598,7 @@ canvas.live-glass:not(.ready) {
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 760px), (pointer: coarse) and (max-height: 520px) {
   [data-glass] .content {
     --head-h: 62px;
   }
@@ -7645,4 +7645,86 @@ canvas.live-glass:not(.ready) {
 }
 .voice-msg .vm-dl:hover {
   opacity: 1;
+}
+
+/* ===== Handy (iPhone-App & Handy-Browser) ===== */
+body.is-phone {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+html:has(body.is-phone),
+body.is-phone {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+/* Höhe = sichtbarer Bereich (über der Tastatur) */
+body.is-phone .app {
+  height: var(--app-h, 100dvh);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+body.is-phone.kb-open .app {
+  padding-bottom: 0;
+}
+/* iOS zoomt bei Schrift unter 16px automatisch ins Eingabefeld und bleibt dann vergrößert */
+body.is-phone :is(input, textarea, select, [contenteditable='true']) {
+  font-size: 16px !important;
+}
+/* Knöpfe & Leisten: kein Markieren / Lupe beim langen Drücken */
+body.is-phone :is(button, .topbar, .chead, .stage-bar, .tile, .sidebar, .dm-item, .ftab) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+body.is-phone .tooltip {
+  display: none !important;
+}
+/* Scrollbereiche: flüssig mit Schwung, ohne die ganze Seite mitzuziehen */
+body.is-phone :is(.sb-scroll, .msgs, .flist, .modal .mb, .settings main) {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+/* Anrufe auf dem Handy: Kacheln untereinander, ganzes Bild sichtbar, große Knöpfe mit Platz */
+body.is-phone .stage-bar {
+  justify-content: center;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+body.is-phone .tile video {
+  background: #000;
+}
+body.is-phone.call-fs .stage {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* Querformat am Handy: Anruf darf die ganze Höhe nutzen */
+@media (pointer: coarse) and (max-height: 520px) {
+  body.is-phone .dm-call > .stage {
+    height: calc(var(--app-h, 100dvh) - 70px);
+  }
+  body.is-phone .dm-call > .chat-wrap {
+    display: none;
+  }
+}
+/* Kopfzeile am Handy: Titel kürzt sich, Knöpfe bleiben alle erreichbar */
+body.is-phone .chead .title {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+body.is-phone .chead .tools {
+  flex: none;
+  gap: 0;
+}
+body.is-phone .chead .tools .btn.sm {
+  padding: 0 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+/* Meldungen oben statt über dem Eingabefeld */
+body.is-phone .toasts {
+  bottom: auto;
+  top: calc(env(safe-area-inset-top) + 64px);
+  width: calc(100vw - 32px);
+  align-items: center;
 }
