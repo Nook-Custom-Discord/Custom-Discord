@@ -336,8 +336,12 @@ class VoiceEngine {
           // Auflösung, FPS und Datenrate des angesehenen Streams (für die Anzeige in der Kachel)
           if (screenTrack && r.type === 'inbound-rtp' && r.kind === 'video' && r.trackIdentifier === screenTrack) {
             const prev = this.screenStats[p.uid];
-            const kbps = prev?.bytes != null && r.timestamp > prev.ts ? Math.round(((r.bytesReceived - prev.bytes) * 8) / (r.timestamp - prev.ts)) : 0;
-            this.screenStats[p.uid] = { w: r.frameWidth, h: r.frameHeight, fps: Math.round(r.framesPerSecond || 0), kbps, bytes: r.bytesReceived, ts: r.timestamp };
+            const dt = prev && r.timestamp > prev.ts ? r.timestamp - prev.ts : 0;
+            const kbps = dt && prev.bytes != null ? Math.round(((r.bytesReceived - prev.bytes) * 8) / dt) : 0;
+            // FPS aus den wirklich dekodierten Bildern seit der letzten Messung (framesPerSecond fehlt oft oder meldet 0)
+            const frames = r.framesDecoded ?? r.framesReceived;
+            const fps = dt && frames != null && prev.frames != null ? Math.round(((frames - prev.frames) * 1000) / dt) : Math.round(r.framesPerSecond || 0);
+            this.screenStats[p.uid] = { w: r.frameWidth, h: r.frameHeight, fps: Math.max(0, fps), kbps: Math.max(0, kbps), bytes: r.bytesReceived, frames, ts: r.timestamp };
           }
         });
         if (!screenTrack) delete this.screenStats[p.uid];

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { S, update, prefs, openMenu, openModal, openPopout, toast, confirmDialog, promptDialog } from './store';
-import { act, rpc, fileUrl, displayName, roleColor, can, P, getEmbed, openExternal, copy, jumpTo, navigate, serverIdOf, mentionsMe, openDM, sendMessage } from './api';
+import { act, rpc, fileUrl, displayName, roleColor, can, P, getEmbed, openExternal, copy, jumpTo, navigate, serverIdOf, mentionsMe, openDM, sendMessage, downloadFile } from './api';
 import { renderMarkdown, isEmojiOnly, extractUrls } from './markdown';
 import { Avatar, Name, fmtTime, fmtDateTime, fmtSize, fmtDuration } from './ui';
 import { Icon } from './icons';
@@ -106,6 +106,9 @@ function VoiceMsg({ a }) {
         {bars.map((h, i) => <span class={i / bars.length < pos ? 'p' : ''} style={{ height: h * 100 + '%' }} />)}
       </div>
       <span class="muted" style={{ fontSize: 12, minWidth: 34 }}>{fmtDuration(dur)}</span>
+      <button class="ibtn sm vm-dl" data-tip="Sprachnachricht herunterladen" onClick={() => downloadFile(a.url, a.name || 'Sprachnachricht.webm')}>
+        <Icon name="download" />
+      </button>
     </div>
   );
 }

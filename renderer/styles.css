@@ -7614,3 +7614,35 @@ canvas.live-glass:not(.ready) {
     border-radius: 22px 22px 0 0;
   }
 }
+
+/* ===== Call-Kacheln: passen immer in den freien Platz (keine Überlappung, nichts unter Kopfzeile/Leiste) ===== */
+.tiles.fit {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  gap: 10px;
+  overflow: hidden;
+}
+.tiles.fit > .tile {
+  flex: none;
+  width: var(--tw, 320px);
+  height: var(--th, 180px);
+  aspect-ratio: auto;
+}
+.stage > .stage-bar,
+.stage > .row {
+  position: relative;
+  z-index: 2;
+}
+/* Glas-Design: Call in Direktnachrichten unter die durchsichtige Kopfzeile schieben */
+[data-glass] .content > .chat-wrap > .dm-call > .chat-wrap {
+  margin-top: var(--head-h);
+}
+.voice-msg .vm-dl {
+  flex: none;
+  opacity: 0.7;
+}
+.voice-msg .vm-dl:hover {
+  opacity: 1;
+}

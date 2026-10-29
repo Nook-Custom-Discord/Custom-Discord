@@ -789,3 +789,21 @@ setInterval(async () => {
     rpc('setStatus', { status: 'idle' }).catch(() => {});
   } else if (idle < 30) setActive();
 }, 30000);
+
+// Datei vom Server herunterladen und lokal speichern (öffnet den Speichern-Dialog)
+export async function downloadFile(url, name = 'datei') {
+  try {
+    const r = await fetch(fileUrl(url));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+  } catch (e) {
+    toast('Download fehlgeschlagen: ' + e.message, 'error');
+  }
+}

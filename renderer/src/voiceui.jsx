@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'preact/hooks';
+import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
 import { S, update, prefs, setPref, openModal, closeModal, openPopout, openMenu, toast } from './store';
 import { act, rpc, displayName, channelTitle, serverIdOf, voiceMembers, can, P, navigate, dismissCall, avatarOf, isVideoUrl, openDM, isElectron } from './api';
 import { V, QUALITY } from './voice';
@@ -180,6 +180,45 @@ function Tile({ uid, kind = 'user', serverId, small, onClick }) {
   );
 }
 
+// Ordnet die Kacheln so an, dass alle gleich groß (16:9) vollständig in den freien Platz passen
+function FitTiles({ count, children }) {
+  const ref = useRef();
+  const [size, setSize] = useState(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const calc = () => {
+      const cs = getComputedStyle(el);
+      const gap = parseFloat(cs.columnGap) || 10;
+      const W = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const H = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      if (W <= 0 || H <= 0) return;
+      let best = { w: 0, h: 0 };
+      for (let cols = 1; cols <= Math.max(1, count); cols++) {
+        const rows = Math.ceil(count / cols);
+        let w = (W - gap * (cols - 1)) / cols;
+        let h = (w * 9) / 16;
+        const maxH = (H - gap * (rows - 1)) / rows;
+        if (h > maxH) {
+          h = maxH;
+          w = (h * 16) / 9;
+        }
+        if (w > best.w) best = { w: Math.floor(w), h: Math.floor(h) };
+      }
+      setSize((old) => (old && old.w === best.w && old.h === best.h ? old : best));
+    };
+    calc();
+    const ro = new ResizeObserver(calc);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [count]);
+  return (
+    <div class="tiles fit" ref={ref} style={size ? { '--tw': size.w + 'px', '--th': size.h + 'px' } : null}>
+      {children}
+    </div>
+  );
+}
+
 function gridCols(n) {
   if (n <= 1) return 1;
   if (n <= 4) return 2;
@@ -283,11 +322,11 @@ export function VoiceStage({ ch }) {
             </div>
           </div>
         ) : (
-          <div class={`tiles ${tiles.length === 1 ? 'single' : ''}`} style={{ gridTemplateColumns: `repeat(${gridCols(tiles.length)}, minmax(0, 1fr))` }}>
+          <FitTiles count={tiles.length}>
             {tiles.map((t) => (
-              <Tile {...t} serverId={serverId} onClick={() => setFocus(t)} />
+              <Tile {...t} key={t.key} serverId={serverId} onClick={() => setFocus(t)} />
             ))}
-          </div>
+          </FitTiles>
         )}
         {isStage && audience.length > 0 && (
           <>
