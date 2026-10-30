@@ -1003,27 +1003,35 @@ class VoiceEngine {
   // iPhone: Der native Player kann kein .ogg/.webm. Deshalb hier (ohne Lautsprecher, nur rechnen) in ein
   // kleines WAV umwandeln und als data:-Adresse übergeben.
   async playNativeSound(url, volume) {
+    let step = 'Laden';
     try {
       this.wavCache = this.wavCache || new Map();
       let wav = this.wavCache.get(url);
       if (!wav) {
-        const ab = await fetch(fileUrl(url)).then((r) => r.arrayBuffer());
+        const res = await fetch(fileUrl(url));
+        if (!res.ok) throw new Error('Server antwortet ' + res.status);
+        const ab = await res.arrayBuffer();
         let pcm;
+        step = 'Entschlüsseln';
         try {
           const buf = await new OfflineAudioContext(1, 1, 24000).decodeAudioData(ab.slice(0));
           pcm = { channels: Array.from({ length: buf.numberOfChannels }, (_, c) => buf.getChannelData(c)), rate: buf.sampleRate, length: buf.length };
         } catch {
           // iOS kann Ogg-Opus nicht selbst öffnen -> eigener Decoder (wird nur hier nachgeladen)
+          step = 'Ogg-Decoder';
           pcm = await decodeOggOpus(new Uint8Array(ab));
         }
+        step = 'Umwandeln';
         wav = toWavDataUrl(pcm, 30);
         if (this.wavCache.size > 40) this.wavCache.clear();
         this.wavCache.set(url, wav);
       }
-      await NC.playSound({ url: wav, volume });
+      step = 'Abspielen';
+      // data: reine Base64-Daten (neuere App), url als Rückfall für ältere App-Versionen
+      await NC.playSound({ url: wav, data: wav.slice(wav.indexOf(',') + 1), volume });
     } catch (e) {
-      // Fallback: Originaldatei (klappt bei mp3/m4a/wav)
-      NC.playSound({ url: fileUrl(url), volume }).catch(() => toast('Dieser Sound lässt sich am iPhone nicht abspielen', 'error'));
+      console.warn('Klangbox iPhone', step, e);
+      toast(`Sound ging nicht (${step}): ${e?.message || e}`, 'error', 7000);
     }
   }
 

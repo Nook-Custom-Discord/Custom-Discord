@@ -38,8 +38,25 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
     private var soundCache: [String: Data] = [:]
 
     @objc func playSound(_ call: CAPPluginCall) {
-        guard let s = call.getString("url"), let url = URL(string: s) else { return call.reject("Adresse fehlt") }
         let volume = Float(call.getDouble("volume") ?? 1)
+        // Bevorzugt: fertige WAV-Daten direkt aus der Oberfläche (Base64)
+        if let b64 = call.getString("data"), let raw = Data(base64Encoded: b64, options: .ignoreUnknownCharacters) {
+            DispatchQueue.main.async {
+                do {
+                    let player = try AVAudioPlayer(data: raw)
+                    player.volume = max(0, min(1, volume))
+                    player.prepareToPlay()
+                    player.play()
+                    self.players.removeAll { !$0.isPlaying }
+                    self.players.append(player)
+                    call.resolve()
+                } catch {
+                    call.reject("Sound nicht abspielbar: \(error.localizedDescription)")
+                }
+            }
+            return
+        }
+        guard let s = call.getString("url"), let url = URL(string: s) else { return call.reject("Adresse fehlt") }
         let play: (Data) -> Void = { [weak self] data in
             DispatchQueue.main.async {
                 guard let self = self else { return }
