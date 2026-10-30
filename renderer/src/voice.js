@@ -170,7 +170,12 @@ class VoiceEngine {
       this.channelId = channelId;
       this.serverId = serverIdOf(ch);
       const res = await rpc('voiceJoin', { channelId, muted: this.muted, deafened: this.deafened, keepAlive: NATIVE_CALL });
-      for (const uid of res.peers) this.createPeer(uid);
+      for (const uid of res.peers) {
+        // iPhone (nativ): Die Video-Verbindung hat hier anfangs nichts zu senden und würde nie ausgehandelt –
+        // die anderen bauen sie deshalb von ihrer Seite auf
+        if (NC) this.signal(uid, { reset: true });
+        this.createPeer(uid);
+      }
       sfx('join');
       this.startLoops();
     } catch (e) {
