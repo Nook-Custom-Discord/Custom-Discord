@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, useStore, openModal, toast } from './store';
 import { auth, connect, normServer, isElectron, navigate, channelTitle, serverIdOf, can, P, rpc, act, sortedChannels, displayName, voiceMembers, openDM, dmList } from './api';
 import { V, IS_PHONE } from './voice';
+import { loadNativeLogin, saveNativeLogin, clearNativeLogin } from './native';
 import { TopBar, HomeSidebar, ServerSidebar, MemberList } from './sidebar';
 import { ChatView, SidePanel, runSearch } from './chat';
 import { FriendsView } from './friends';
@@ -433,7 +434,7 @@ function App() {
         </div>
         <div>{S.conn === 'reconnecting' ? `Server ${S.serverUrl} nicht erreichbar – versuche erneut …` : 'Verbinde …'}</div>
         {S.conn === 'reconnecting' && (
-          <button class="btn ghost sm" onClick={() => { localStorage.removeItem('nook.token'); location.reload(); }}>
+          <button class="btn ghost sm" onClick={() => { localStorage.removeItem('nook.token'); clearNativeLogin(); location.reload(); }}>
             Anderen Server wählen
           </button>
         )}
@@ -526,6 +527,21 @@ window.nook?.on?.('hotkey', (k) => {
   if (k === 'mute') V.toggleMute();
   if (k === 'deafen') V.toggleDeafen();
 });
-if (S.token && S.serverUrl) connect();
+if (S.token && S.serverUrl) {
+  connect();
+  // ältere Anmeldungen einmal in den Schlüsselbund übernehmen
+  saveNativeLogin(S.serverUrl, S.token);
+} else {
+  // iPhone-App: iOS hat den Speicher der Web-Ansicht geleert -> Anmeldung aus dem Schlüsselbund holen
+  loadNativeLogin().then((l) => {
+    if (!l || S.token) return;
+    S.serverUrl = l.server;
+    S.token = l.token;
+    localStorage.setItem('nook.server', l.server);
+    localStorage.setItem('nook.token', l.token);
+    connect();
+    update();
+  });
+}
 initFx();
 render(<App />, document.getElementById('root'));

@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 import UIKit
+import Security
 import Capacitor
 import WebRTC
 
@@ -24,7 +25,50 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setDeafened", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "levels", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "status", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "saveLogin", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "loadLogin", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clearLogin", returnType: CAPPluginReturnPromise),
     ]
+
+    // ---------- Angemeldet bleiben ----------
+    // Server-Adresse und Anmelde-Schlüssel (kein Passwort) liegen im iPhone-Schlüsselbund. Der bleibt erhalten,
+    // auch wenn iOS den Speicher der Web-Ansicht leert oder die App neu aufgespielt wird.
+    private static let loginQuery: [String: Any] = [
+        kSecClass as String: kSecClassGenericPassword,
+        kSecAttrService as String: "app.nook.client.login",
+        kSecAttrAccount as String: "login",
+    ]
+
+    @objc func saveLogin(_ call: CAPPluginCall) {
+        guard let server = call.getString("server"), let token = call.getString("token"), !token.isEmpty,
+              let data = try? JSONSerialization.data(withJSONObject: ["server": server, "token": token]) else {
+            return call.reject("Anmeldedaten fehlen")
+        }
+        SecItemDelete(NookCallPlugin.loginQuery as CFDictionary)
+        var item = NookCallPlugin.loginQuery
+        item[kSecValueData as String] = data
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        let status = SecItemAdd(item as CFDictionary, nil)
+        if status == errSecSuccess { call.resolve() } else { call.reject("Schlüsselbund-Fehler \(status)") }
+    }
+
+    @objc func loadLogin(_ call: CAPPluginCall) {
+        var query = NookCallPlugin.loginQuery
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var out: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &out)
+        guard status == errSecSuccess, let data = out as? Data,
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: String] else {
+            return call.resolve([:])
+        }
+        call.resolve(["server": obj["server"] ?? "", "token": obj["token"] ?? ""])
+    }
+
+    @objc func clearLogin(_ call: CAPPluginCall) {
+        SecItemDelete(NookCallPlugin.loginQuery as CFDictionary)
+        call.resolve()
+    }
 
     // ---------- Ton am Leben halten ----------
     // iOS (bzw. die Web-Ansicht) kann die Ton-Sitzung beim Minimieren/Sperren umstellen oder abschalten.

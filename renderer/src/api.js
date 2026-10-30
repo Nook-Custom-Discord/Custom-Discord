@@ -2,6 +2,7 @@ import { io } from 'socket.io-client';
 import { S, update, prefs, setPref, toast, savePrefs } from './store';
 import { P, memberPerms } from '../../shared/perms';
 import { sfx, startRing, stopRing } from './sounds';
+import { saveNativeLogin, clearNativeLogin } from './native';
 
 export const isElectron = !!window.nook?.isElectron;
 export let socket = null;
@@ -41,6 +42,7 @@ export async function auth(serverUrl, mode, body) {
   S.token = data.token;
   localStorage.setItem('nook.server', base);
   localStorage.setItem('nook.token', data.token);
+  saveNativeLogin(base, data.token);
   connect();
 }
 
@@ -49,6 +51,7 @@ export function logout() {
   socket?.disconnect();
   socket = null;
   localStorage.removeItem('nook.token');
+  clearNativeLogin();
   Object.assign(S, { token: '', me: null, conn: 'idle', servers: {}, channels: {}, users: {}, messages: {}, voice: {} });
   update();
 }

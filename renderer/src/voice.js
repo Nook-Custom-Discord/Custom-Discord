@@ -3,6 +3,7 @@
 import { S, update, prefs, setPref, toast } from './store';
 import { rpc, bindVoice, fileUrl, displayName, serverIdOf } from './api';
 import { sfx, stopRing } from './sounds';
+import { NC } from './native';
 
 export const QUALITY = {
   '720p30': { label: '720p · 30 FPS', w: 1280, h: 720, fps: 30, br: 4_000_000 },
@@ -20,14 +21,6 @@ export const IS_PHONE = location.protocol === 'capacitor:' || /iPhone|iPad|iPod|
 export const CAN_SHARE_SCREEN = !!navigator.mediaDevices?.getDisplayMedia && !IS_PHONE;
 // iPhone-App mit nativer Sprach-Erweiterung: Mikro und Ton laufen dort auch bei gesperrtem Bildschirm weiter.
 // Die Sprache geht dann über eine eigene Verbindung („Spur a“), Kamera und Streams wie bisher über die Web-Ansicht.
-const NC = (() => {
-  try {
-    const C = window.Capacitor;
-    return C?.isPluginAvailable?.('NookCall') ? C.registerPlugin('NookCall') : null;
-  } catch {
-    return null;
-  }
-})();
 export const NATIVE_CALL = !!NC;
 
 export const CAMERA_QUALITY = {
