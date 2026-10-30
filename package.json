@@ -29,6 +29,7 @@
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
     "nook-call": "file:native/nook-call",
+    "ogg-opus-decoder": "1.6.16",
     "preact": "^10.29.8",
     "socket.io-client": "^4.8.4"
   },
@@ -49,6 +50,7 @@
       "renderer/index.html",
       "renderer/styles.css",
       "renderer/bundle.js",
+      "renderer/opus.js",
       "build/icon.png",
       "package.json",
       "scripts/**/*",

@@ -1008,9 +1008,15 @@ class VoiceEngine {
       let wav = this.wavCache.get(url);
       if (!wav) {
         const ab = await fetch(fileUrl(url)).then((r) => r.arrayBuffer());
-        const rate = 24000;
-        const buf = await new OfflineAudioContext(1, 1, rate).decodeAudioData(ab);
-        wav = toWavDataUrl(buf, 30);
+        let pcm;
+        try {
+          const buf = await new OfflineAudioContext(1, 1, 24000).decodeAudioData(ab.slice(0));
+          pcm = { channels: Array.from({ length: buf.numberOfChannels }, (_, c) => buf.getChannelData(c)), rate: buf.sampleRate, length: buf.length };
+        } catch {
+          // iOS kann Ogg-Opus nicht selbst öffnen -> eigener Decoder (wird nur hier nachgeladen)
+          pcm = await decodeOggOpus(new Uint8Array(ab));
+        }
+        wav = toWavDataUrl(pcm, 30);
         if (this.wavCache.size > 40) this.wavCache.clear();
         this.wavCache.set(url, wav);
       }
@@ -1086,12 +1092,46 @@ class VoiceEngine {
   }
 }
 
-// AudioBuffer -> Mono-WAV (16 Bit) als data:-Adresse, höchstens maxSec Sekunden
-function toWavDataUrl(buf, maxSec) {
-  const rate = buf.sampleRate;
-  const len = Math.min(buf.length, Math.round(rate * maxSec));
-  const chans = [];
-  for (let c = 0; c < buf.numberOfChannels; c++) chans.push(buf.getChannelData(c));
+// Ogg-Opus selbst entschlüsseln (renderer/opus.js vom Nook-Server); auf 24 kHz halbiert, reicht für Sounds
+let opusLoad = null;
+async function decodeOggOpus(bytes) {
+  if (!window.NookOpus) {
+    opusLoad =
+      opusLoad ||
+      new Promise((ok, fail) => {
+        const sc = document.createElement('script');
+        sc.src = (S.serverUrl || '') + '/opus.js';
+        sc.onload = ok;
+        sc.onerror = () => {
+          opusLoad = null;
+          fail(new Error('Decoder nicht ladbar'));
+        };
+        document.head.appendChild(sc);
+      });
+    await opusLoad;
+  }
+  const dec = new window.NookOpus();
+  await dec.ready;
+  try {
+    const r = await dec.decodeFile(bytes);
+    if (!r.samplesDecoded) throw new Error('Sound leer');
+    const half = Math.floor(r.samplesDecoded / 2);
+    const channels = r.channelData.map((ch) => {
+      const out = new Float32Array(half);
+      for (let i = 0; i < half; i++) out[i] = (ch[2 * i] + ch[2 * i + 1]) / 2;
+      return out;
+    });
+    return { channels, rate: r.sampleRate / 2, length: half };
+  } finally {
+    dec.free();
+  }
+}
+
+// PCM { channels, rate, length } -> Mono-WAV (16 Bit) als data:-Adresse, höchstens maxSec Sekunden
+function toWavDataUrl(pcm, maxSec) {
+  const rate = pcm.rate;
+  const len = Math.min(pcm.length, Math.round(rate * maxSec));
+  const chans = pcm.channels;
   const out = new DataView(new ArrayBuffer(44 + len * 2));
   const str = (o, s) => {
     for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i));

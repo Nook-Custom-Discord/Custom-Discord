@@ -14,7 +14,7 @@ function defaultDir() {
 //   NOOK_DEPLOY_URL=https://mein-pi.ts.net NOOK_DEPLOY_KEY=<admin.key> npm run deploy
 if (process.env.NOOK_DEPLOY_URL) {
   (async () => {
-    for (const f of ['styles.css', 'bundle.js']) {
+    for (const f of ['styles.css', 'bundle.js', 'opus.js']) {
       const body = fs.readFileSync(path.join(__dirname, '..', 'renderer', f));
       const r = await fetch(`${process.env.NOOK_DEPLOY_URL.replace(/\/$/, '')}/api/admin/${process.env.NOOK_DEPLOY_KEY}/ui/${f}`, { method: 'PUT', body });
       if (!r.ok) throw new Error(f + ': HTTP ' + r.status);
@@ -28,7 +28,7 @@ if (process.env.NOOK_DEPLOY_URL) {
 }
 const dir = process.env.NOOK_UI_DIR || defaultDir();
 fs.mkdirSync(dir, { recursive: true });
-for (const f of ['styles.css', 'bundle.js']) {
+for (const f of ['styles.css', 'bundle.js', 'opus.js']) {
   // erst in temporäre Datei, dann umbenennen -> nie halb geschriebene Dateien
   const tmp = path.join(dir, f + '.tmp');
   fs.copyFileSync(path.join(__dirname, '..', 'renderer', f), tmp);

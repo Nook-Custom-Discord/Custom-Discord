@@ -14,5 +14,7 @@ const opts = {
   logLevel: 'info',
   loader: { '.js': 'jsx' },
 };
+// Ogg-Opus-Decoder fürs iPhone als eigene Datei (wird nur dort bei Bedarf geladen)
+const opusOpts = { ...opts, entryPoints: ['renderer/src/opus-entry.js'], outfile: 'renderer/opus.js', target: ['safari16'], sourcemap: false, minify: true };
 if (watch) esbuild.context(opts).then((c) => c.watch());
-else esbuild.build(opts).catch(() => process.exit(1));
+else Promise.all([esbuild.build(opts), esbuild.build(opusOpts)]).catch(() => process.exit(1));

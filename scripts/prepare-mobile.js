@@ -8,7 +8,7 @@ const root = path.join(__dirname, '..');
 const out = path.join(root, 'mobile-www');
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
-for (const f of ['index.html', 'styles.css', 'bundle.js', 'manifest.webmanifest', 'icons']) {
+for (const f of ['index.html', 'styles.css', 'bundle.js', 'manifest.webmanifest', 'icons', 'opus.js']) {
   const src = path.join(root, 'renderer', f);
   if (fs.existsSync(src)) fs.cpSync(src, path.join(out, f), { recursive: true });
 }
