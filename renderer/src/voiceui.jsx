@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
 import { S, update, prefs, setPref, openModal, closeModal, openPopout, openMenu, toast } from './store';
 import { act, rpc, displayName, channelTitle, serverIdOf, voiceMembers, can, P, navigate, dismissCall, avatarOf, isVideoUrl, openDM, isElectron } from './api';
-import { V, QUALITY, IS_PHONE, CAN_SHARE_SCREEN } from './voice';
+import { V, QUALITY, IS_PHONE, CAN_SHARE_SCREEN, NATIVE_CALL } from './voice';
 import { Avatar, Modal, Seg, SegBox, Video, Name, Spinner, ServerIcon } from './ui';
 import { Icon } from './icons';
 import { ChatView } from './chat';
@@ -226,6 +226,27 @@ function gridCols(n) {
   return 4;
 }
 
+// ---------- iPhone-App: läuft der Ton auch gesperrt weiter? ----------
+function BackgroundAudioHint({ ch }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((x) => x + 1), 2000);
+    return () => clearInterval(t);
+  }, []);
+  if (location.protocol !== 'capacitor:') return null;
+  if (!NATIVE_CALL) return <div class="bg-audio-hint warn">⚠️ Diese App-Version kann keinen Ton im Hintergrund – bitte die neueste iPhone-App aufspielen</div>;
+  const others = voiceMembers(ch.id).map((m) => m.uid).filter((u) => u !== S.me.id);
+  if (!others.length) return null;
+  const settling = Date.now() - (V.joinedAt || 0) < 8000;
+  const bad = others.filter((u) => V.nstate[u] !== 'connected');
+  if (bad.length && !settling) {
+    const names = bad.map((u) => displayName(u)).join(', ');
+    return <div class="bg-audio-hint warn">⚠️ Ton-Verbindung zu {names} steht nicht – dort Nook einmal neu starten (alte Version)</div>;
+  }
+  if (bad.length) return <div class="bg-audio-hint">Verbinde Ton …</div>;
+  return <div class="bg-audio-hint ok">🔒 Ton läuft auch bei gesperrtem iPhone weiter</div>;
+}
+
 // ---------- Steuerleiste ----------
 export function CallControls({ ch, compact }) {
   const serverId = serverIdOf(ch);
@@ -234,6 +255,7 @@ export function CallControls({ ch, compact }) {
   if (!connected) return null;
   return (
     <div class="stage-bar">
+      <BackgroundAudioHint ch={ch} />
       <button class={`round-btn ${V.muted ? 'off' : ''}`} data-tip={V.muted ? 'Stummschaltung aufheben' : 'Stummschalten'} onClick={() => V.toggleMute()}>
         <Icon name={V.muted ? 'micOff' : 'mic'} />
       </button>

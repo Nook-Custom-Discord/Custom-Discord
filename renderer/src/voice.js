@@ -1,7 +1,7 @@
 // WebRTC-Mesh: jeder ist mit jedem direkt verbunden (ideal für Freundesgruppen bis ~10 Personen).
 // Bildschirm-Streams werden nur an Leute geschickt, die auf "Ansehen" klicken – spart Bandbreite.
 import { S, update, prefs, setPref, toast } from './store';
-import { rpc, bindVoice, fileUrl, displayName, serverIdOf } from './api';
+import { rpc, bindVoice, fileUrl, displayName, serverIdOf, channelTitle } from './api';
 import { sfx, stopRing } from './sounds';
 import { NC } from './native';
 
@@ -86,6 +86,7 @@ class VoiceEngine {
     this.screenStats = {}; // uid -> { w, h, fps, kbps } für angesehene Streams
     this.buf = new Float32Array(512);
     this.apeers = new Map(); // uid -> { pc } Sprachverbindungen zu iPhones mit nativer Erweiterung
+    this.nstate = {}; // uid -> 'connected' | 'failed' | 'disconnected' (nur iPhone-App)
     this.laneQ = {};
     if (NC) {
       NC.addListener('signal', (d) => {
@@ -93,7 +94,19 @@ class VoiceEngine {
         if (d.desc) this.signal(d.uid, { lane: 'a', desc: d.desc, fresh: !!d.fresh });
         else if (d.cand) this.signal(d.uid, { lane: 'a', cand: d.cand });
       });
-      NC.addListener('state', () => update());
+      // Zustand der nativen Sprachverbindungen (für die Anzeige im Anruf)
+      NC.addListener('state', (d) => {
+        if (d?.uid) this.nstate[d.uid] = d.state;
+        update();
+      });
+      // Auflegen / Stummschalten über die iOS-Anrufanzeige (Dynamic Island, Sperrbildschirm)
+      NC.addListener('hangup', () => this.channelId && this.leave());
+      NC.addListener('muted', (d) => {
+        if (!this.channelId) return;
+        this.muted = !!d?.muted;
+        if (!this.muted) this.deafened = false;
+        this.pushState();
+      });
     }
 
     window.addEventListener('keydown', (e) => {
@@ -147,7 +160,11 @@ class VoiceEngine {
       if (this.channelId) await this.leave(true);
       stopRing();
       await this.setupAudio();
-      if (NC) await NC.start({ iceServers: S.iceServers || [], muted: this.muted, deafened: this.deafened });
+      if (NC) {
+        this.nstate = {};
+        this.joinedAt = Date.now();
+        await NC.start({ iceServers: S.iceServers || [], muted: this.muted, deafened: this.deafened, name: channelTitle(S.channels[channelId]) || 'Nook' });
+      }
       else if (location.protocol === 'capacitor:') toast('Diese App-Version hat noch keine nativen Anrufe – beim Sperren geht der Ton aus. Bitte neueste iPhone-App installieren.', 'error', 8000);
       const ch = S.channels[channelId];
       this.channelId = channelId;
@@ -186,6 +203,7 @@ class VoiceEngine {
     if (NC) {
       try {
         const st = await NC.status();
+        if (st.callKit) lines.push(`iOS-Anruf (CallKit): ${st.callKit}`);
         lines.push(`Ton-Sitzung: ${st.category} / ${st.mode} · aktiv: ${st.active ? 'ja' : 'nein'} · Ausgabe: ${st.route}`);
         lines.push(`Sprach-Verbindungen: ${Object.entries(st.peers || {}).map(([u, v]) => `${S.users[u]?.displayName || u}: ${v}`).join(', ') || '–'}`);
         lines.push('', 'Protokoll:', ...(st.log || []).slice(-15));

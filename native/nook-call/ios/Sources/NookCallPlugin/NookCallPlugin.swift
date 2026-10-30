@@ -4,6 +4,7 @@ import UIKit
 import Security
 import Capacitor
 import WebRTC
+import CallKit
 
 // Native Sprachverbindung für die iPhone-App.
 // Die Web-Ansicht von iOS schaltet Mikrofon und Ton ab, sobald der Bildschirm gesperrt wird. Deshalb läuft die
@@ -153,7 +154,8 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     private func checkAudio(reason: String) {
-        guard inCall else { return }
+        // Solange CallKit den Ton gerade nicht freigegeben hat (z. B. echter Telefonanruf), nicht dazwischenfunken
+        guard inCall, !(callUUID != nil && !callKitAudio && callKitStarted) else { return }
         let session = AVAudioSession.sharedInstance()
         let rtc = RTCAudioSession.sharedInstance()
         if session.category != .playAndRecord || !rtc.isActive || !rtc.isAudioEnabled {
@@ -182,6 +184,7 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
             var peerStates = JSObject()
             for (uid, peer) in self.peers { peerStates[uid] = peer.stateName }
             call.resolve([
+                "callKit": self.callUUID != nil ? (self.callKitAudio ? "aktiv" : "wartet auf Ton") : "aus",
                 "category": session.category.rawValue,
                 "mode": session.mode.rawValue,
                 "active": RTCAudioSession.sharedInstance().isActive,
@@ -190,6 +193,68 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
                 "log": self.log,
             ])
         }
+    }
+
+    // ---------- CallKit: Nook meldet sich bei iOS als richtiger Anruf ----------
+    // Dann behandelt iOS den Ton wie bei einem Telefonat (läuft gesperrt und im Hintergrund weiter) und zeigt
+    // den Anruf in der Dynamic Island / auf dem Sperrbildschirm mit Stummschalten und Auflegen.
+    private var provider: CXProvider?
+    fileprivate let callController = CXCallController()
+    fileprivate var callUUID: UUID?
+    fileprivate var callKitAudio = false
+    fileprivate var callKitStarted = false
+    private var endingFromApp = false
+
+    private func startCallKit(name: String) {
+        if provider == nil {
+            let config = CXProviderConfiguration()
+            config.supportsVideo = false
+            config.maximumCallGroups = 1
+            config.maximumCallsPerCallGroup = 1
+            config.supportedHandleTypes = [.generic]
+            config.includesCallsInRecents = false
+            let p = CXProvider(configuration: config)
+            p.setDelegate(self, queue: .main)
+            provider = p
+        }
+        if callUUID != nil { return }
+        let uuid = UUID()
+        callUUID = uuid
+        callKitAudio = false
+        callKitStarted = false
+        endingFromApp = false
+        let action = CXStartCallAction(call: uuid, handle: CXHandle(type: .generic, value: name))
+        callController.request(CXTransaction(action: action)) { [weak self] error in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                if let error = error {
+                    // CallKit nicht verfügbar -> Ton selbst einschalten (wie bisher)
+                    self.note("CallKit nicht möglich: \(error.localizedDescription)")
+                    self.callUUID = nil
+                    self.enableAudioDirectly()
+                }
+            }
+        }
+        // Sicherheitsnetz: Wenn iOS den Ton nicht freigibt, nach 2 s selbst einschalten
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            guard let self = self, self.inCall, !self.callKitAudio, !RTCAudioSession.sharedInstance().isAudioEnabled else { return }
+            self.note("CallKit hat den Ton nicht freigegeben – schalte selbst ein")
+            self.enableAudioDirectly()
+        }
+    }
+
+    private func enableAudioDirectly() {
+        guard inCall else { return }
+        configureAudio(activate: true)
+        RTCAudioSession.sharedInstance().isAudioEnabled = true
+    }
+
+    private func endCallKit() {
+        guard let uuid = callUUID else { return }
+        endingFromApp = true
+        callUUID = nil
+        callKitAudio = false
+        callController.request(CXTransaction(action: CXEndCallAction(call: uuid))) { _ in }
     }
 
     private static let factory: RTCPeerConnectionFactory = {
@@ -209,6 +274,7 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
         let servers = call.getArray("iceServers", JSObject.self) ?? []
         let muted = call.getBool("muted") ?? false
         let deafened = call.getBool("deafened") ?? false
+        let callName = call.getString("name") ?? "Nook"
         DispatchQueue.main.async {
             self.iceServers = servers.compactMap { NookCallPlugin.iceServer($0) }
             if self.iceServers.isEmpty {
@@ -216,17 +282,17 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             self.muted = muted
             self.deafened = deafened
-            // Ton-Einheit selbst steuern, damit sie nach einer Unterbrechung neu angestoßen werden kann
+            // Ton-Einheit selbst steuern: Sie läuft erst, wenn iOS (CallKit) den Ton freigibt
             RTCAudioSession.sharedInstance().useManualAudio = true
-            self.configureAudio()
+            self.configureAudio(activate: false)
             if self.audioTrack == nil {
                 let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
                 let source = NookCallPlugin.factory.audioSource(with: constraints)
                 self.audioTrack = NookCallPlugin.factory.audioTrack(with: source, trackId: "nook-mic")
             }
-            RTCAudioSession.sharedInstance().isAudioEnabled = true
             self.applyMute()
             self.startGuard()
+            self.startCallKit(name: callName)
             self.note("Anruf gestartet, Ausgabe: \(self.routeName())")
             call.resolve()
         }
@@ -239,6 +305,7 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
             self.peers.removeAll()
             self.audioTrack = nil
             self.note("Anruf beendet")
+            self.endCallKit()
             RTCAudioSession.sharedInstance().isAudioEnabled = false
             let session = RTCAudioSession.sharedInstance()
             session.lockForConfiguration()
@@ -302,8 +369,12 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func setMuted(_ call: CAPPluginCall) {
         let value = call.getBool("muted") ?? false
         DispatchQueue.main.async {
+            let changed = self.muted != value
             self.muted = value
             self.applyMute()
+            if changed, let uuid = self.callUUID {
+                self.callController.request(CXTransaction(action: CXSetMutedCallAction(call: uuid, muted: value))) { _ in }
+            }
             call.resolve()
         }
     }
@@ -363,15 +434,17 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
         return RTCIceServer(urlStrings: urls, username: obj["username"] as? String, credential: obj["credential"] as? String)
     }
 
-    private func configureAudio() {
+    private func configureAudio(activate: Bool = true) {
         let session = RTCAudioSession.sharedInstance()
         session.lockForConfiguration()
         let config = RTCAudioSessionConfiguration.webRTC()
         config.category = AVAudioSession.Category.playAndRecord.rawValue
         config.mode = AVAudioSession.Mode.voiceChat.rawValue
-        // Lautsprecher statt Hörmuschel (wie bei Discord), Bluetooth-Headsets erlaubt, Musik anderer Apps läuft leise weiter
-        config.categoryOptions = [.allowBluetooth, .defaultToSpeaker, .mixWithOthers]
-        do { try session.setConfiguration(config, active: true) } catch { print("NookCall: Audio-Einstellung fehlgeschlagen: \(error)") }
+        // Lautsprecher statt Hörmuschel (wie bei Discord), Bluetooth-Headsets erlaubt
+        config.categoryOptions = [.allowBluetooth, .defaultToSpeaker]
+        do {
+            if activate { try session.setConfiguration(config, active: true) } else { try session.setConfiguration(config) }
+        } catch { note("Audio-Einstellung fehlgeschlagen: \(error.localizedDescription)") }
         session.unlockForConfiguration()
     }
 
@@ -549,4 +622,62 @@ final class NookPeer: NSObject, RTCPeerConnectionDelegate {
     func peerConnection(_ peerConnection: RTCPeerConnection, didRemove candidates: [RTCIceCandidate]) {}
 
     func peerConnection(_ peerConnection: RTCPeerConnection, didOpen dataChannel: RTCDataChannel) {}
+}
+
+extension NookCallPlugin: CXProviderDelegate {
+    public func providerDidReset(_ provider: CXProvider) {
+        note("CallKit zurückgesetzt")
+        callUUID = nil
+        callKitAudio = false
+    }
+
+    public func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
+        callKitStarted = true
+        configureAudio(activate: false)
+        provider.reportOutgoingCall(with: action.callUUID, startedConnectingAt: Date())
+        provider.reportOutgoingCall(with: action.callUUID, connectedAt: Date())
+        let update = CXCallUpdate()
+        update.localizedCallerName = action.handle.value
+        update.hasVideo = false
+        provider.reportCall(with: action.callUUID, updated: update)
+        action.fulfill()
+        note("CallKit-Anruf angemeldet")
+    }
+
+    public func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
+        callKitAudio = true
+        let rtc = RTCAudioSession.sharedInstance()
+        rtc.audioSessionDidActivate(audioSession)
+        configureAudio(activate: false)
+        rtc.isAudioEnabled = true
+        note("iOS hat den Ton freigegeben (CallKit)")
+    }
+
+    public func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
+        callKitAudio = false
+        let rtc = RTCAudioSession.sharedInstance()
+        rtc.audioSessionDidDeactivate(audioSession)
+        rtc.isAudioEnabled = false
+        note("iOS hat den Ton pausiert (CallKit)")
+    }
+
+    public func provider(_ provider: CXProvider, perform action: CXEndCallAction) {
+        action.fulfill()
+        if !endingFromApp {
+            // Auflegen über die iOS-Anrufanzeige -> Oberfläche verlässt den Anruf
+            note("Aufgelegt über iOS")
+            callUUID = nil
+            notifyListeners("hangup", data: [:])
+        }
+        endingFromApp = false
+    }
+
+    public func provider(_ provider: CXProvider, perform action: CXSetMutedCallAction) {
+        action.fulfill()
+        if action.isMuted != muted {
+            muted = action.isMuted
+            applyMute()
+            notifyListeners("muted", data: ["muted": action.isMuted])
+        }
+    }
 }

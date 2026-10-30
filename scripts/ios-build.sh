@@ -23,6 +23,7 @@ setkey NSPhotoLibraryAddUsageDescription string "Nook speichert Bilder und Datei
 pb "Delete :UIBackgroundModes"
 pb "Add :UIBackgroundModes array"
 pb "Add :UIBackgroundModes:0 string audio"
+pb "Add :UIBackgroundModes:1 string voip"
 setkey CFBundleDisplayName string "Nook"
 setkey CFBundleShortVersionString string "$VERSION"
 setkey CFBundleVersion string "$BUILD_NR"
