@@ -200,6 +200,8 @@ export function pickFile(accept = '*/*', multiple = false) {
 
 // ---------- Ereignisse ----------
 function onReady(d) {
+  // iPhone-App: Anmeldung bei jeder erfolgreichen Verbindung im Schlüsselbund sichern
+  saveNativeLogin(S.serverUrl, S.token);
   const firstLoad = !S.me;
   S.me = d.me;
   S.users = d.users;

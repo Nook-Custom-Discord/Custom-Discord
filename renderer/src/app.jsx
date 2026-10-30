@@ -433,9 +433,12 @@ function App() {
           <LogoMark size={36} />
         </div>
         <div>{S.conn === 'reconnecting' ? `Server ${S.serverUrl} nicht erreichbar – versuche erneut …` : 'Verbinde …'}</div>
+        {S.conn === 'reconnecting' && location.protocol === 'capacitor:' && (
+          <div class="hint" style={{ maxWidth: 300, textAlign: 'center' }}>Ist Tailscale am iPhone eingeschaltet? Sobald der Server erreichbar ist, verbindet sich Nook von selbst – du bleibst angemeldet.</div>
+        )}
         {S.conn === 'reconnecting' && (
           <button class="btn ghost sm" onClick={() => { localStorage.removeItem('nook.token'); clearNativeLogin(); location.reload(); }}>
-            Anderen Server wählen
+            Abmelden & anderen Server wählen
           </button>
         )}
       </div>

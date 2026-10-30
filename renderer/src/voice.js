@@ -204,6 +204,8 @@ class VoiceEngine {
       try {
         const st = await NC.status();
         if (st.callKit) lines.push(`iOS-Anruf (CallKit): ${st.callKit}`);
+        const login = await NC.loadLogin().catch(() => null);
+        lines.push(`Angemeldet bleiben (Schlüsselbund): ${login?.token ? 'gespeichert ✅' : 'nicht gespeichert ❌'}`);
         lines.push(`Ton-Sitzung: ${st.category} / ${st.mode} · aktiv: ${st.active ? 'ja' : 'nein'} · Ausgabe: ${st.route}`);
         lines.push(`Sprach-Verbindungen: ${Object.entries(st.peers || {}).map(([u, v]) => `${S.users[u]?.displayName || u}: ${v}`).join(', ') || '–'}`);
         lines.push('', 'Protokoll:', ...(st.log || []).slice(-15));
