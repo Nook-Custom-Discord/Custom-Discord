@@ -217,19 +217,23 @@ class VoiceEngine {
   }
 
   // iPhone nach dem Entsperren: Die Sprache (nativ) lief weiter – nur die Video-Verbindungen neu aufbauen
-  async rejoinNative(ch) {
+  async rejoinNative(ch, attempt = 0) {
+    if (this.channelId !== ch) return;
     for (const uid of [...this.peers.keys()]) this.closeMainPeer(uid);
     try {
       const res = await rpc('voiceJoin', { channelId: ch, muted: this.muted, deafened: this.deafened, keepAlive: true, resume: true });
       if (this.camStream) await rpc('voiceUpdate', { video: true, cameraStreamId: this.camStream.id });
       const { uids = [] } = await NC.listPeers().catch(() => ({}));
-      for (const uid of uids) if (!res.peers.includes(uid)) NC.closePeer({ uid }).catch(() => {});
+      // Server hatte uns schon aus dem Kanal genommen -> die anderen haben ihre Ton-Verbindung zu uns geschlossen,
+      // also auch die eigenen neu aufbauen
+      for (const uid of uids) if (!res.resumed || !res.peers.includes(uid)) NC.closePeer({ uid }).catch(() => {});
       for (const uid of res.peers) {
         this.signal(uid, { reset: true });
         this.createPeer(uid);
       }
     } catch {
-      this.leave(true);
+      // Im Hintergrund klappt das oft nicht sofort – nie auflegen, der Ton läuft nativ weiter. Später erneut versuchen.
+      if (attempt < 20) setTimeout(() => this.rejoinNative(ch, attempt + 1), Math.min(15000, 2000 * (attempt + 1)));
     }
   }
 
@@ -588,7 +592,7 @@ class VoiceEngine {
         ap.failTimer = setTimeout(() => {
           ap.failTimer = null;
           if (this.apeers.get(uid) === ap && ['failed', 'disconnected'].includes(pc.connectionState) && S.voice[uid]?.away) rpc('voicePeerLost', { userId: uid }).catch(() => {});
-        }, 25000);
+        }, 45000);
       }
       update();
     };

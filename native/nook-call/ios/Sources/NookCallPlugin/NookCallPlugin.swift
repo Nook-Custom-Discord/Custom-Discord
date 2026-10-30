@@ -111,6 +111,11 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
             guard let self = self, self.inCall else { return }
             self.note("App wieder vorne")
             self.checkAudio(reason: "Vordergrund")
+            // kurz warten, bis die Web-Ansicht die Server-Verbindung wieder hat
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                guard let self = self else { return }
+                for peer in self.peers.values { peer.restartIfNeeded() }
+            }
             if self.bgTask != .invalid {
                 UIApplication.shared.endBackgroundTask(self.bgTask)
                 self.bgTask = .invalid
@@ -496,6 +501,17 @@ final class NookPeer: NSObject, RTCPeerConnectionDelegate {
     var remoteSet = false
     var pending: [RTCIceCandidate] = []
     var stateName = "neu"
+    var needsRestart = false
+
+    // App ist wieder vorne: Verbindungen, die im Hintergrund gehakt haben, jetzt neu aushandeln
+    func restartIfNeeded() {
+        guard let pc = pc, !closed else { return }
+        let state = pc.iceConnectionState
+        if needsRestart || state == .failed || state == .disconnected {
+            needsRestart = false
+            makeOffer(restart: true)
+        }
+    }
     private var offers = 0
     private var closed = false
     private var restartWork: DispatchWorkItem?
@@ -586,6 +602,7 @@ final class NookPeer: NSObject, RTCPeerConnectionDelegate {
             self.plugin?.note("Verbindung \(self.uid.prefix(6)): \(self.stateName)")
             switch newState {
             case .connected, .completed:
+                self.needsRestart = false
                 self.restartWork?.cancel()
                 self.restartWork = nil
                 self.tuneBitrate()
@@ -593,16 +610,24 @@ final class NookPeer: NSObject, RTCPeerConnectionDelegate {
                 self.plugin?.emitState(self, "connected")
             case .failed, .disconnected:
                 self.plugin?.emitState(self, newState == .failed ? "failed" : "disconnected")
-                // Netz gewechselt (WLAN <-> Mobilfunk) oder kurz weg: Verbindung neu aushandeln
+                // Netz gewechselt (WLAN <-> Mobilfunk) oder kurz weg: Verbindung neu aushandeln.
+                // Aber nur, wenn die App vorne ist – im Hintergrund ist die Server-Verbindung pausiert, ein neues
+                // Angebot käme nie an und würde die (sich oft von selbst erholende) Verbindung nur kaputt machen.
                 if self.restartWork == nil {
                     let work = DispatchWorkItem { [weak self] in
                         guard let self = self, !self.closed else { return }
                         self.restartWork = nil
                         let state = self.pc?.iceConnectionState
-                        if state == .failed || state == .disconnected { self.makeOffer(restart: true) }
+                        guard state == .failed || state == .disconnected else { return }
+                        if UIApplication.shared.applicationState == .active {
+                            self.makeOffer(restart: true)
+                        } else {
+                            self.needsRestart = true
+                            self.plugin?.note("Verbindung \(self.uid.prefix(6)) hakt – warte, bis die App wieder vorne ist")
+                        }
                     }
                     self.restartWork = work
-                    DispatchQueue.main.asyncAfter(deadline: .now() + (newState == .failed ? 1 : 4), execute: work)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + (newState == .failed ? 2 : 8), execute: work)
                 }
             default:
                 break
