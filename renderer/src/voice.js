@@ -976,8 +976,8 @@ class VoiceEngine {
     // iPhone (nativ): Der Sound lässt sich nicht ins Mikro mischen. Deshalb spielen ihn die anderen selbst ab
     // (siehe onSoundboard) und das iPhone über die native Erweiterung, ohne den Anruf-Ton zu stören.
     if (NC && this.channelId) {
-      rpc('soundboard', { soundId: sound.id, emoji: sound.emoji || '🔊' }).catch(() => toast('Sound konnte nicht gesendet werden', 'error'));
-      NC.playSound({ url: fileUrl(sound.url), volume: Math.min(1, (sound.volume ?? 1) * prefs.outputVolume) }).catch(() => {});
+      rpc('soundboard', { soundId: `${sound.id}::${sound.url}::${sound.volume ?? 1}`, emoji: sound.emoji || '🔊' }).catch(() => toast('Sound konnte nicht gesendet werden', 'error'));
+      this.playNativeSound(sound.url, Math.min(1, (sound.volume ?? 1) * prefs.outputVolume));
       return;
     }
     if (!this.ctx) return toast('Tritt erst einem Sprachkanal bei', 'error');
@@ -1000,12 +1000,34 @@ class VoiceEngine {
     }
   }
 
+  // iPhone: Der native Player kann kein .ogg/.webm. Deshalb hier (ohne Lautsprecher, nur rechnen) in ein
+  // kleines WAV umwandeln und als data:-Adresse übergeben.
+  async playNativeSound(url, volume) {
+    try {
+      this.wavCache = this.wavCache || new Map();
+      let wav = this.wavCache.get(url);
+      if (!wav) {
+        const ab = await fetch(fileUrl(url)).then((r) => r.arrayBuffer());
+        const rate = 24000;
+        const buf = await new OfflineAudioContext(1, 1, rate).decodeAudioData(ab);
+        wav = toWavDataUrl(buf, 30);
+        if (this.wavCache.size > 40) this.wavCache.clear();
+        this.wavCache.set(url, wav);
+      }
+      await NC.playSound({ url: wav, volume });
+    } catch (e) {
+      // Fallback: Originaldatei (klappt bei mp3/m4a/wav)
+      NC.playSound({ url: fileUrl(url), volume }).catch(() => toast('Dieser Sound lässt sich am iPhone nicht abspielen', 'error'));
+    }
+  }
+
   // Sound von einem iPhone (nativ) lokal abspielen – nur hören, nicht weiterschicken
   async playRemoteSound(d) {
-    const sound = allSounds().find((x) => x.id === d.soundId);
+    const [id, url, vol] = String(d.soundId || '').split('::');
+    const sound = url ? { id, url, volume: Number(vol) || 1 } : allSounds().find((x) => x.id === id);
     if (!sound || prefs.localMutes[d.userId] || this.deafened) return;
     const volume = Math.min(1, (sound.volume ?? 1) * this.volumeFor(d.userId, 'mic'));
-    if (NC) return NC.playSound({ url: fileUrl(sound.url), volume }).catch(() => {});
+    if (NC) return this.playNativeSound(sound.url, volume);
     if (!this.ctx) return;
     try {
       let buf = this.soundCache.get(sound.url);
@@ -1062,6 +1084,41 @@ class VoiceEngine {
     }
     if (isHere && prev?.cameraStreamId && !state.cameraStreamId && this.remote[uid]) delete this.remote[uid].camera;
   }
+}
+
+// AudioBuffer -> Mono-WAV (16 Bit) als data:-Adresse, höchstens maxSec Sekunden
+function toWavDataUrl(buf, maxSec) {
+  const rate = buf.sampleRate;
+  const len = Math.min(buf.length, Math.round(rate * maxSec));
+  const chans = [];
+  for (let c = 0; c < buf.numberOfChannels; c++) chans.push(buf.getChannelData(c));
+  const out = new DataView(new ArrayBuffer(44 + len * 2));
+  const str = (o, s) => {
+    for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i));
+  };
+  str(0, 'RIFF');
+  out.setUint32(4, 36 + len * 2, true);
+  str(8, 'WAVE');
+  str(12, 'fmt ');
+  out.setUint32(16, 16, true);
+  out.setUint16(20, 1, true);
+  out.setUint16(22, 1, true);
+  out.setUint32(24, rate, true);
+  out.setUint32(28, rate * 2, true);
+  out.setUint16(32, 2, true);
+  out.setUint16(34, 16, true);
+  str(36, 'data');
+  out.setUint32(40, len * 2, true);
+  for (let i = 0; i < len; i++) {
+    let v = 0;
+    for (const ch of chans) v += ch[i];
+    v = Math.max(-1, Math.min(1, v / chans.length));
+    out.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true);
+  }
+  const bytes = new Uint8Array(out.buffer);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return 'data:audio/wav;base64,' + btoa(bin);
 }
 
 function isTyping(e) {
