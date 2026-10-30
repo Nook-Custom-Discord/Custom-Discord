@@ -1,7 +1,7 @@
 // WebRTC-Mesh: jeder ist mit jedem direkt verbunden (ideal für Freundesgruppen bis ~10 Personen).
 // Bildschirm-Streams werden nur an Leute geschickt, die auf "Ansehen" klicken – spart Bandbreite.
 import { S, update, prefs, setPref, toast } from './store';
-import { rpc, bindVoice, fileUrl, displayName, serverIdOf, channelTitle } from './api';
+import { rpc, bindVoice, fileUrl, displayName, serverIdOf, channelTitle, allSounds } from './api';
 import { sfx, stopRing } from './sounds';
 import { NC } from './native';
 
@@ -973,7 +973,13 @@ class VoiceEngine {
 
   // ---------- Soundboard ----------
   async playSound(sound) {
-    if (NC && this.channelId) return toast('Die Klangbox gibt es am iPhone während Anrufen (noch) nicht', 'error');
+    // iPhone (nativ): Der Sound lässt sich nicht ins Mikro mischen. Deshalb spielen ihn die anderen selbst ab
+    // (siehe onSoundboard) und das iPhone über die native Erweiterung, ohne den Anruf-Ton zu stören.
+    if (NC && this.channelId) {
+      rpc('soundboard', { soundId: sound.id, emoji: sound.emoji || '🔊' }).catch(() => toast('Sound konnte nicht gesendet werden', 'error'));
+      NC.playSound({ url: fileUrl(sound.url), volume: Math.min(1, (sound.volume ?? 1) * prefs.outputVolume) }).catch(() => {});
+      return;
+    }
     if (!this.ctx) return toast('Tritt erst einem Sprachkanal bei', 'error');
     try {
       let buf = this.soundCache.get(sound.url);
@@ -994,8 +1000,32 @@ class VoiceEngine {
     }
   }
 
+  // Sound von einem iPhone (nativ) lokal abspielen – nur hören, nicht weiterschicken
+  async playRemoteSound(d) {
+    const sound = allSounds().find((x) => x.id === d.soundId);
+    if (!sound || prefs.localMutes[d.userId] || this.deafened) return;
+    const volume = Math.min(1, (sound.volume ?? 1) * this.volumeFor(d.userId, 'mic'));
+    if (NC) return NC.playSound({ url: fileUrl(sound.url), volume }).catch(() => {});
+    if (!this.ctx) return;
+    try {
+      let buf = this.soundCache.get(sound.url);
+      if (!buf) {
+        const ab = await fetch(fileUrl(sound.url)).then((r) => r.arrayBuffer());
+        buf = await this.ctx.decodeAudioData(ab);
+        this.soundCache.set(sound.url, buf);
+      }
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      const g = this.ctx.createGain();
+      g.gain.value = volume;
+      src.connect(g).connect(this.master);
+      src.start();
+    } catch {}
+  }
+
   onSoundboard(d) {
     if (d.channelId !== this.channelId) return;
+    if (d.userId !== S.me.id && S.voice[d.userId]?.keepAlive) this.playRemoteSound(d);
     const fx = { userId: d.userId, emoji: d.emoji, at: Date.now() };
     this.soundFx.push(fx);
     setTimeout(() => {

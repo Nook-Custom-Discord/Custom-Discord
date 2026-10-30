@@ -29,7 +29,44 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "saveLogin", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "loadLogin", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearLogin", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "playSound", returnType: CAPPluginReturnPromise),
     ]
+
+    // ---------- Klangbox ----------
+    // Sounds laufen über die Ton-Sitzung des Anrufs (über die Web-Ansicht würde iOS den Anruf-Ton stören).
+    private var players: [AVAudioPlayer] = []
+    private var soundCache: [String: Data] = [:]
+
+    @objc func playSound(_ call: CAPPluginCall) {
+        guard let s = call.getString("url"), let url = URL(string: s) else { return call.reject("Adresse fehlt") }
+        let volume = Float(call.getDouble("volume") ?? 1)
+        let play: (Data) -> Void = { [weak self] data in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                do {
+                    let player = try AVAudioPlayer(data: data)
+                    player.volume = max(0, min(1, volume))
+                    player.prepareToPlay()
+                    player.play()
+                    self.players.removeAll { !$0.isPlaying }
+                    self.players.append(player)
+                    call.resolve()
+                } catch {
+                    call.reject("Sound nicht abspielbar: \(error.localizedDescription)")
+                }
+            }
+        }
+        if let cached = soundCache[s] { return play(cached) }
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+            guard let data = data, error == nil else { return call.reject("Sound nicht ladbar") }
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                if self.soundCache.count > 40 { self.soundCache.removeAll() }
+                self.soundCache[s] = data
+            }
+            play(data)
+        }.resume()
+    }
 
     // ---------- Angemeldet bleiben ----------
     // Server-Adresse und Anmelde-Schlüssel (kein Passwort) liegen im iPhone-Schlüsselbund. Der bleibt erhalten,
