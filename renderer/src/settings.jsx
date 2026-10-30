@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
-import { S, update, prefs, setPref, confirmDialog, promptDialog, toast } from './store';
+import { S, update, prefs, setPref, confirmDialog, promptDialog, toast, openMenu } from './store';
 import { act, rpc, pickAndUpload, pickAvatar, pickFile, upload, fileUrl, logout, displayName, isElectron, copy, AVATAR_VIDEO_MAX_S } from './api';
 import { Avatar, Switch, ToggleRow, Seg, SegBox, Video, Spinner, useIndicator, WALLPAPERS, wallpaperId } from './ui';
 import { Icon } from './icons';
@@ -9,6 +9,10 @@ import { NameText } from './ui';
 import { V, QUALITY } from './voice';
 import { previewSound, PACKS, SOUND_EVENTS } from './sounds';
 import { clearMarkdownCache } from './markdown';
+import { GAME, publishGame } from './games';
+import { CLIP, CLIPS_SUPPORTED, CLIP_QUALITY, CLIP_LENGTHS, CLIP_HOTKEYS, syncClips, applyClipHotkey, applyClipVoice, shareClip, saveClip } from './clips';
+import { PlayTime } from './ui';
+import { dmList, channelTitle } from './api';
 import { fadeIn, withTransition } from './fx';
 import { setGlass, refractionSupported, windowCaps } from './glass';
 
@@ -1098,6 +1102,240 @@ function Keybinds() {
   );
 }
 
+// ---------- Spiele & Clips (nur Desktop) ----------
+const fmtSize = (b) => (b > 1e9 ? (b / 1e9).toFixed(1) + ' GB' : Math.max(0.1, b / 1e6).toFixed(1) + ' MB');
+function GamesClips() {
+  const [cfg, setCfg] = useState(null);
+  const [running, setRunning] = useState(null);
+  const [clips, setClips] = useState(null);
+  const loadClips = () => window.nook.clips.list().then(setClips);
+  useEffect(() => {
+    window.nook.getConfig().then(setCfg);
+  }, []);
+  useEffect(() => {
+    loadClips();
+  }, [CLIP.last?.at]);
+  const g = GAME.current;
+  const mine = S.activities[S.me.id];
+  const custom = async (o) => {
+    const r = await window.nook.games.custom(o);
+    setCfg({ ...cfg, customGames: r.customGames, ignoredGames: r.ignoredGames });
+    if (running) setRunning(await window.nook.games.running());
+  };
+  const addGame = async (w) => {
+    const name = await promptDialog('Spiel hinzufügen', { value: w.game || w.title || w.key, placeholder: 'Name des Spiels' });
+    if (name?.trim()) custom({ key: w.key, name: name.trim() });
+  };
+  const setClipPref = (k, v) => {
+    setPref(k, v);
+    syncClips();
+    if (k === 'clipsOn' || k === 'clipHotkey') applyClipHotkey();
+    if (k === 'clipsOn' || k === 'clipVoice') applyClipVoice();
+  };
+  const share = (e, path) => {
+    const chats = [S.view.channelId && S.channels[S.view.channelId]?.type !== 'voice' && S.channels[S.view.channelId], ...dmList().slice(0, 8)].filter((c, i, a) => c && a.indexOf(c) === i);
+    openMenu(e, chats.length ? chats.map((c) => ({ label: channelTitle(c), icon: c.type === 'text' ? 'hash' : 'chat', onClick: () => shareClip(path, c.id) })) : [{ label: 'Öffne zuerst einen Chat', icon: 'chat', onClick: () => {} }]);
+  };
+  const st = CLIP.state;
+  const vs = CLIP.voice || {};
+  return (
+    <>
+      <h1>Spiele & Clips</h1>
+      <h3>Was du spielst</h3>
+      <div class="card game-now">
+        <div class={`gn-ic ${g ? 'on' : ''}`}>
+          <Icon name="gamepad" size={26} />
+        </div>
+        <div class="grow" style={{ minWidth: 0 }}>
+          {g ? (
+            <>
+              <b class="ellipsis" style={{ display: 'block', fontSize: 16 }}>{g.name}</b>
+              <div class="hint">
+                Läuft seit <PlayTime since={g.since} clock /> · {prefs.shareGames !== false ? (mine && !mine.auto ? 'deine eigene Aktivität hat gerade Vorrang' : 'Freunde sehen das') : 'nur für dich sichtbar'}
+              </div>
+            </>
+          ) : (
+            <>
+              <b>Gerade läuft kein Spiel</b>
+              <div class="hint">Nook erkennt bekannte Spiele und alles aus Steam, Epic, Xbox, GOG, Ubisoft und EA automatisch.</div>
+            </>
+          )}
+        </div>
+        {g && (
+          <button class="btn ghost sm" data-tip="Dieses Programm nicht mehr als Spiel erkennen" onClick={() => custom({ key: g.exe, ignore: true })}>
+            Ist kein Spiel
+          </button>
+        )}
+      </div>
+      <ToggleRow
+        title="Zeigen, was ich spiele"
+        desc="Freunde sehen das Spiel und wie lange du schon spielst – in der Freundesliste, im Profil und unter „Was gerade läuft“"
+        on={prefs.shareGames !== false}
+        onChange={(v) => {
+          setPref('shareGames', v);
+          publishGame();
+        }}
+      />
+      <div class="toggle-row">
+        <div class="grow">
+          <div class="t">Spiel wird nicht erkannt?</div>
+          <div class="d">Starte das Spiel und wähle es aus der Liste der offenen Programme.</div>
+        </div>
+        <button class="btn ghost sm" onClick={async () => setRunning(running ? null : await window.nook.games.running())}>
+          {running ? 'Schließen' : 'Spiel hinzufügen'}
+        </button>
+      </div>
+      {running && (
+        <div class="card run-list">
+          {running.length === 0 && <div class="hint">Keine Programme mit Fenster gefunden.</div>}
+          {running.map((w) => (
+            <div class="list-row">
+              <div class="grow" style={{ minWidth: 0 }}>
+                <b class="ellipsis" style={{ display: 'block' }}>{w.title || w.key}</b>
+                <div class="hint">{w.key}{w.game ? ` · erkannt als ${w.game}` : ''}</div>
+              </div>
+              <button class="btn sm" onClick={() => addGame(w)}>{w.game ? 'Umbenennen' : 'Ist ein Spiel'}</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {cfg && (Object.keys(cfg.customGames || {}).length > 0 || (cfg.ignoredGames || []).length > 0) && (
+        <div class="card run-list">
+          {Object.entries(cfg.customGames || {}).map(([k, n]) => (
+            <div class="list-row">
+              <div class="grow">
+                <b>{n}</b> <span class="hint">· {k}</span>
+              </div>
+              <button class="btn ghost sm" onClick={() => custom({ key: k })}>Entfernen</button>
+            </div>
+          ))}
+          {(cfg.ignoredGames || []).map((k) => (
+            <div class="list-row">
+              <div class="grow">
+                <span class="hint">Wird ignoriert:</span> {k}
+              </div>
+              <button class="btn ghost sm" onClick={() => custom({ key: k })}>Wieder erkennen</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h3>Clips</h3>
+      <div class={`card clip-status st-${st}`}>
+        <span class="cs-dot" />
+        <div class="grow">
+          <b>
+            {st === 'rec'
+              ? `Aufnahme läuft – die letzten ${prefs.clipLength || 30} Sekunden sind bereit`
+              : st === 'starting'
+                ? 'Aufnahme startet …'
+                : st === 'error'
+                  ? 'Aufnahme nicht möglich'
+                  : prefs.clipsOn === false
+                    ? 'Clips sind aus'
+                    : prefs.clipWhen === 'always'
+                      ? 'Aufnahme aus'
+                      : 'Wartet auf ein Spiel – startet dann automatisch'}
+          </b>
+          <div class="hint">{st === 'error' ? CLIP.error : 'Nook puffert nur im Arbeitsspeicher. Gespeichert wird erst, wenn du clippst.'}</div>
+        </div>
+        {st === 'rec' && (
+          <button class="btn sm" disabled={CLIP.saving} onClick={() => saveClip('button')}>
+            <Icon name="clip" size={16} /> Jetzt clippen
+          </button>
+        )}
+      </div>
+      <ToggleRow title="Clips aufnehmen" desc="Speichere die letzten Sekunden mit Tastenkürzel, Knopf oben rechts oder Sprachbefehl" on={prefs.clipsOn !== false} onChange={(v) => setClipPref('clipsOn', v)} />
+      {prefs.clipsOn !== false && (
+        <>
+          <div class="field">
+            <label>Wann aufnehmen</label>
+            <Seg value={prefs.clipWhen === 'always' ? 'always' : 'game'} onChange={(v) => setClipPref('clipWhen', v)} options={[['game', '🎮 Nur im Spiel'], ['always', '🖥️ Immer']]} />
+          </div>
+          <div class="field">
+            <label>Länge eines Clips</label>
+            <Seg value={Number(prefs.clipLength) || 30} onChange={(v) => setClipPref('clipLength', v)} options={CLIP_LENGTHS.map((n) => [n, n < 60 ? `${n} s` : `${n / 60} Min.`])} />
+          </div>
+          <div class="field">
+            <label>Qualität</label>
+            <select class="select" value={CLIP_QUALITY[prefs.clipQuality] ? prefs.clipQuality : '1080p30'} onChange={(e) => setClipPref('clipQuality', e.target.value)}>
+              {Object.entries(CLIP_QUALITY).map(([k, q]) => (
+                <option value={k}>{q.label}</option>
+              ))}
+            </select>
+            <div class="hint">Höher sieht besser aus, braucht aber mehr Leistung beim Zocken.</div>
+          </div>
+          <ToggleRow title="Eigene Stimme mit aufnehmen" desc={`Im Anruf landet dein Mikro mit im Clip${window.nook.platform === 'win32' ? ' – Spielton und Freunde sind immer dabei' : ' (Systemton nimmt der Mac nicht auf)'}`} on={prefs.clipMic !== false} onChange={(v) => setClipPref('clipMic', v)} />
+          <div class="toggle-row">
+            <div class="grow">
+              <div class="t">Tastenkürzel</div>
+              <div class="d">{CLIP.hotkeyOk ? 'Funktioniert überall, auch mitten im Spiel' : '⚠️ Dieses Kürzel benutzt schon ein anderes Programm – wähl ein anderes'}</div>
+            </div>
+            <select class="select" style={{ width: 'auto' }} value={prefs.clipHotkey || 'Alt+F10'} onChange={(e) => setClipPref('clipHotkey', e.target.value)}>
+              {CLIP_HOTKEYS.map(([k, keys]) => (
+                <option value={k}>{keys.join(' + ')}</option>
+              ))}
+            </select>
+          </div>
+          {cfg?.clipVoice && (
+            <>
+              <ToggleRow
+                title="Sprachbefehl „Clip das“"
+                desc="Sag „Clip das“ oder „Nook, clip“ (auf Englisch „clip that“) – läuft offline über die Windows-Spracherkennung"
+                on={!!prefs.clipVoice}
+                onChange={(v) => setClipPref('clipVoice', v)}
+              />
+              {prefs.clipVoice && (
+                <div class={`hint voice-st st-${vs.state}`}>
+                  {vs.state === 'on' ? `● Hört zu (${vs.lang || 'Windows'})` : vs.state === 'starting' ? '○ Startet …' : vs.state === 'error' ? `⚠️ ${vs.error}` : '○ Aus'}
+                  {' · '}Hält das Mikrofon offen. Manche Bluetooth-Headsets schalten dann auf Telefon-Qualität – dann lieber das Tastenkürzel nehmen.
+                </div>
+              )}
+            </>
+          )}
+          <div class="toggle-row">
+            <div class="grow" style={{ minWidth: 0 }}>
+              <div class="t">Speicherort</div>
+              <div class="d ellipsis">{clips?.dir || '…'}</div>
+            </div>
+            <button class="btn ghost sm" onClick={() => window.nook.clips.folder()}>Öffnen</button>
+            <button class="btn ghost sm" onClick={async () => { await window.nook.clips.chooseDir(); loadClips(); }}>Ändern</button>
+          </div>
+        </>
+      )}
+      <h3>Deine Clips</h3>
+      {!clips ? (
+        <Spinner />
+      ) : clips.clips.length === 0 ? (
+        <div class="hint">Noch keine Clips. Drück im Spiel {(CLIP_HOTKEYS.find(([k]) => k === (prefs.clipHotkey || 'Alt+F10'))?.[1] || ['Alt', 'F10']).join(' + ')} – dann landen die letzten Sekunden hier.</div>
+      ) : (
+        <div class="card clip-list">
+          {clips.clips.map((c) => (
+            <div class="list-row">
+              <button class="clip-play" data-tip="Abspielen" onClick={() => window.nook.clips.open(c.path)}>
+                <Icon name="play" size={18} />
+              </button>
+              <div class="grow" style={{ minWidth: 0 }}>
+                <b class="ellipsis" style={{ display: 'block' }}>{c.name.replace(/\.webm$/i, '')}</b>
+                <div class="hint">{new Date(c.mtime).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' })} · {fmtSize(c.size)}</div>
+              </div>
+              <button class="ibtn sm" data-tip="Im Ordner zeigen" onClick={() => window.nook.clips.show(c.path)}>
+                <Icon name="file" />
+              </button>
+              <button class="ibtn sm" data-tip="An Freunde schicken" onClick={(e) => share(e, c.path)}>
+                <Icon name="send" />
+              </button>
+              <button class="ibtn sm red" data-tip="In den Papierkorb" onClick={async () => { await window.nook.clips.remove(c.path); loadClips(); }}>
+                <Icon name="trash" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 // ---------- Host-Server (nur Desktop) ----------
 function Host() {
   const [st, setSt] = useState(null);
@@ -1226,10 +1464,10 @@ export function SettingsView() {
   }, [tab]);
   const tabs = [
     ['Benutzer', [['account', 'Mein Konto', 'at'], ['profile', 'Profil', 'smile'], ['privacy', 'Datenschutz', 'shield']]],
-    ['App', [['appearance', 'Darstellung', 'palette'], ['voice', 'Sprache & Video', 'mic'], ['notifications', 'Benachrichtigungen', 'bell'], ['sounds', 'Sounds', 'volume'], ['keybinds', 'Tastenkürzel', 'keyboard'], isElectron && ['host', 'Server hosten', 'server'], isElectron && ['app', 'App & Autostart', 'gear'], ['about', 'Über Nook', 'sparkle']]],
+    ['App', [['appearance', 'Darstellung', 'palette'], ['voice', 'Sprache & Video', 'mic'], ['notifications', 'Benachrichtigungen', 'bell'], ['sounds', 'Sounds', 'volume'], ['keybinds', 'Tastenkürzel', 'keyboard'], CLIPS_SUPPORTED && ['games', 'Spiele & Clips', 'gamepad'], isElectron && ['host', 'Server hosten', 'server'], isElectron && ['app', 'App & Autostart', 'gear'], ['about', 'Über Nook', 'sparkle']]],
   ];
   const [navRef, navInd] = useIndicator();
-  const C = { account: Account, profile: Profile, privacy: Privacy, appearance: Appearance, voice: Voice, notifications: Notifications, sounds: Sounds, keybinds: Keybinds, host: Host, app: AppSettings, about: About }[tab] || Account;
+  const C = { account: Account, profile: Profile, privacy: Privacy, appearance: Appearance, voice: Voice, notifications: Notifications, sounds: Sounds, keybinds: Keybinds, games: GamesClips, host: Host, app: AppSettings, about: About }[tab] || Account;
   return (
     <div class="settings">
       <nav>

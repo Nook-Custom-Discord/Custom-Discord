@@ -1460,7 +1460,15 @@ function startServer({ port = 3500, dataDir = path.join(process.cwd(), 'nook-dat
     },
     setActivity(uid, { activity }) {
       const u = db.users[uid];
-      u.activity = activity ? { name: cleanStr(activity.name, 80), type: cleanStr(activity.type, 20), since: Date.now() } : null;
+      if (activity) {
+        const name = cleanStr(activity.name, 80);
+        const type = cleanStr(activity.type, 20);
+        // Startzeit vom Gerät übernehmen (erkanntes Spiel läuft schon länger), sonst bei gleicher Aktivität behalten
+        const now = Date.now();
+        let since = Number(activity.since);
+        if (!(since > now - 48 * 3600e3 && since <= now + 60e3)) since = u.activity?.name === name && u.activity?.type === type ? u.activity.since : now;
+        u.activity = { name, type, since: Math.min(since, now), ...(activity.auto ? { auto: true } : {}) };
+      } else u.activity = null;
       emitTo([...relatedUsers(uid), uid], 'activity', { userId: uid, activity: u.activity });
       return true;
     },

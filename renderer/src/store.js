@@ -18,6 +18,14 @@ const PREF_DEFAULTS = {
   wallpaper: 'graphite',
   wallpaperUrl: '',
   wallpaperMotion: true,
+  shareGames: true, // erkanntes Spiel (mit Spielzeit) Freunden zeigen – nur Desktop-App
+  clipsOn: true, // Clips: Bildschirm im Hintergrund puffern
+  clipWhen: 'game', // 'game' = nur während eines Spiels, 'always' = immer
+  clipLength: 30, // Sekunden pro Clip
+  clipQuality: '1080p30',
+  clipMic: true, // eigene Stimme aus dem Anruf mit aufnehmen
+  clipHotkey: 'Alt+F10',
+  clipVoice: false, // Sprachbefehl „Clip das“ (Windows)
   showEmbeds: true,
   autoplayGifs: true,
   inputDevice: '',

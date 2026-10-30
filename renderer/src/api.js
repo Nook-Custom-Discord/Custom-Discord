@@ -5,6 +5,9 @@ import { sfx, startRing, stopRing } from './sounds';
 import { saveNativeLogin, clearNativeLogin } from './native';
 
 export const isElectron = !!window.nook?.isElectron;
+// Rückrufe nach jeder (Neu-)Verbindung und bei geänderten Aktivitäten (z. B. für die Spiel-Erkennung)
+export const readyHooks = [];
+export const activityHooks = [];
 export let socket = null;
 let voiceRef = null;
 export function bindVoice(v) {
@@ -215,6 +218,7 @@ function onReady(d) {
   S.activities = d.activities || {};
   S.messages = {};
   S.conn = 'ready';
+  for (const f of readyHooks) f();
   if (S.view.serverId !== '@me' && !S.servers[S.view.serverId]) S.view = { serverId: '@me', channelId: null, homeTab: 'online' };
   if (S.view.channelId && !S.channels[S.view.channelId]) S.view.channelId = null;
   if (S.view.channelId) loadMessages(S.view.channelId);
@@ -279,6 +283,7 @@ function onEvent(type, d) {
     case 'activity':
       if (d.activity) S.activities[d.userId] = d.activity;
       else delete S.activities[d.userId];
+      for (const f of activityHooks) f(d.userId, d.activity);
       break;
     case 'relationship': {
       const prev = S.rel[d.userId];

@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import { S, update, openModal, confirmDialog, toast } from './store';
 import { act, openDM, displayName, voiceMembers, channelTitle, navigate, serverIdOf } from './api';
-import { Avatar, STATUS_LABEL, Name, useIndicator } from './ui';
+import { Avatar, STATUS_LABEL, Name, useIndicator, PlayTime } from './ui';
 import { Icon } from './icons';
 import { V } from './voice';
 import { memberMenu } from './sidebar';
@@ -58,6 +58,12 @@ function FriendRow({ uid, type }) {
         </div>
         <div class="s ellipsis">
           {type === 'friend' && u.customStatus?.emoji && <EmojiView e={u.customStatus.emoji} size={13} />} {status}
+          {type === 'friend' && act0?.since && (
+            <span class="play-time">
+              {' · '}
+              <PlayTime since={act0.since} />
+            </span>
+          )}
         </div>
       </div>
       <div class="acts" onClick={(e) => e.stopPropagation()}>
@@ -145,8 +151,13 @@ function ActiveNow() {
             <div class="grow" style={{ minWidth: 0 }}>
               <b>{displayName(id)}</b>
               <div class="muted ellipsis" style={{ fontSize: 12.5 }}>
-                {a.type || 'Spielt'} {a.name}
+                {a.type || 'Spielt'} <b class="an-game">{a.name}</b>
               </div>
+              {a.since && (
+                <div class="an-time">
+                  <Icon name="gamepad" size={13} /> <PlayTime since={a.since} clock />
+                </div>
+              )}
             </div>
             <span style={{ fontSize: 22 }}>🎮</span>
           </div>

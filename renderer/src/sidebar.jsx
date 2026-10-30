@@ -1,11 +1,12 @@
 import { useState } from 'preact/hooks';
 import { S, update, prefs, setPref, openModal, openMenu, openPopout, confirmDialog, promptDialog, toast } from './store';
 import { act, rpc, navigate, serverUnread, sortedChannels, isUnread, displayName, channelTitle, voiceMembers, can, P, dmList, roleColor, hoistRole, markRead, copy, openDM, fileUrl, serverIdOf, notifyLevel, updateBadge } from './api';
-import { Avatar, ServerIcon, ChannelIcon, Name, STATUS_LABEL, GroupIcon, onlineCount, useIndicator } from './ui';
+import { Avatar, ServerIcon, ChannelIcon, Name, STATUS_LABEL, GroupIcon, onlineCount, useIndicator, PlayTime } from './ui';
 import { Icon, LogoMark } from './icons';
 import { V } from './voice';
 import { CallIsland, voiceUserMenu } from './voiceui';
 import { EmojiView } from './picker';
+import { CLIP, CLIPS_SUPPORTED, saveClip } from './clips';
 
 const IS_MAC = window.nook?.platform === 'darwin' || /Mac/.test(navigator.platform);
 
@@ -89,6 +90,7 @@ export function TopBar() {
         <span class="kbd">{IS_MAC ? '⌘K' : 'Strg K'}</span>
       </button>
       <div class="me-dock">
+        {CLIPS_SUPPORTED && prefs.clipsOn !== false && <ClipButton />}
         <button class={`ibtn sm ${V.muted ? 'red' : ''}`} data-tip={V.muted ? 'Stummschaltung aufheben' : 'Stummschalten'} onClick={() => V.toggleMute()}>
           <Icon name={V.muted ? 'micOff' : 'mic'} />
         </button>
@@ -102,11 +104,37 @@ export function TopBar() {
           <Avatar uid={me.id} size={32} status />
           <div style={{ minWidth: 0, textAlign: 'left' }}>
             <div class="n ellipsis">{me.displayName}</div>
-            <div class="s ellipsis">{me.customStatus?.text || STATUS_LABEL[me.status]}</div>
+            <div class="s ellipsis">{me.customStatus?.text || (S.activities[me.id] ? `${S.activities[me.id].type || 'Spielt'} ${S.activities[me.id].name}` : STATUS_LABEL[me.status])}</div>
           </div>
         </button>
       </div>
     </div>
+  );
+}
+
+// Clip-Knopf oben rechts: roter Punkt = Aufnahme läuft, Klick speichert die letzten Sekunden
+function ClipButton() {
+  const on = CLIP.state === 'rec';
+  const tip = CLIP.saving
+    ? 'Clip wird gespeichert …'
+    : on
+      ? `Clip speichern – letzte ${prefs.clipLength || 30} s`
+      : CLIP.state === 'starting'
+        ? 'Aufnahme startet …'
+        : CLIP.state === 'error'
+          ? CLIP.error
+          : prefs.clipWhen === 'always'
+            ? 'Clips: Aufnahme aus'
+            : 'Clips: startet automatisch im Spiel';
+  return (
+    <button
+      class={`ibtn sm clip-btn ${on ? 'rec' : ''} ${CLIP.saving ? 'saving' : ''} ${CLIP.state === 'error' ? 'err' : ''}`}
+      data-tip={tip}
+      onClick={() => (on ? saveClip() : (S.settings = { tab: 'games' }, update()))}
+      onContextMenu={(e) => { e.preventDefault(); S.settings = { tab: 'games' }; update(); }}
+    >
+      <Icon name="clip" />
+    </button>
   );
 }
 
@@ -173,7 +201,7 @@ function DmItem({ ch }) {
   const inCall = voiceMembers(ch.id).length > 0;
   const other = ch.type === 'dm' ? ch.recipients.find((r) => r !== S.me.id) : null;
   const u = other && S.users[other];
-  const sub = ch.type === 'group' ? ch.topic || `${ch.recipients.length} Mitglieder · ${onlineCount(ch.recipients)} online` : u?.customStatus?.text || (S.activities[other] ? `${S.activities[other].type || 'Spielt'} ${S.activities[other].name}` : '');
+  const sub = ch.type === 'group' ? ch.topic || `${ch.recipients.length} Mitglieder · ${onlineCount(ch.recipients)} online` : u?.customStatus?.text || (S.activities[other] ? `🎮 ${S.activities[other].type || 'Spielt'} ${S.activities[other].name}` : '');
   const menu = (e) =>
     openMenu(e, [
       { label: 'Als gelesen markieren', icon: 'check', onClick: () => markRead(ch.id) },
@@ -485,6 +513,12 @@ function MemberRow({ uid, serverId, offline, ch }) {
             {act0 ? (
               <>
                 {act0.type || 'Spielt'} <b>{act0.name}</b>
+                {act0.since && (
+                  <span class="play-time">
+                    {' · '}
+                    <PlayTime since={act0.since} />
+                  </span>
+                )}
               </>
             ) : u.customStatus ? (
               <>

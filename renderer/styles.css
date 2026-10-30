@@ -7286,6 +7286,159 @@ video.img {
   animation: dpulse 1s infinite;
 }
 
+/* =================== Spiele & Clips =================== */
+.settings main .toggle-row + .field {
+  margin-top: 14px;
+}
+/* Clip-Knopf oben rechts: roter Punkt = Aufnahme läuft */
+.clip-btn {
+  position: relative;
+}
+.clip-btn.rec::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--bg);
+  animation: rec-blink 2s ease-in-out infinite;
+}
+.clip-btn.saving {
+  color: var(--accent);
+  animation: pulse 0.8s infinite;
+}
+.clip-btn.err {
+  color: var(--warn);
+}
+@keyframes rec-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+/* Spielzeit in Listen */
+.play-time {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.an-game {
+  color: var(--text2);
+  font-weight: 600;
+}
+.an-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--ok);
+  font-variant-numeric: tabular-nums;
+}
+/* Profilkarte: Spiel mit laufender Uhr */
+.pcard .act-row {
+  gap: 10px;
+}
+.pcard .act-ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  flex: none;
+  background: var(--mat-raised);
+}
+.pcard .act-time {
+  display: block;
+  font-size: 12px;
+  color: var(--ok);
+  font-variant-numeric: tabular-nums;
+}
+/* Einstellungen: Spiele & Clips */
+.game-now {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.gn-ic {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--muted);
+  background: var(--mat-raised);
+}
+.gn-ic.on {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+.run-list,
+.clip-list {
+  padding: 4px 14px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.run-list .list-row,
+.clip-list .list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.run-list .list-row:last-child,
+.clip-list .list-row:last-child {
+  border-bottom: 0;
+}
+.clip-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.cs-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--offline);
+}
+.st-rec .cs-dot {
+  background: var(--danger);
+  animation: rec-blink 2s ease-in-out infinite;
+}
+.st-starting .cs-dot {
+  background: var(--warn);
+}
+.st-error .cs-dot {
+  background: var(--warn);
+}
+.clip-play {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--text);
+  background: var(--mat-raised);
+  transition: background 0.15s, color 0.15s;
+}
+.clip-play:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.voice-st {
+  margin: -4px 0 10px;
+}
+.voice-st.st-on {
+  color: var(--ok);
+}
+
 /* =================== Liquid Glass =================== */
 /* Aktiv über <html data-glass="tinted|clear">. Die Materialien (--mat-*) werden zu Glas, der Hintergrund
    wird sichtbar. Lichtbrechung an den Kanten kommt aus glass.js (SVG-Filter als backdrop-filter). */

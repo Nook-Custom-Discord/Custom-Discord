@@ -128,6 +128,10 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
 - Klangbox mit eigenen Sounds, Text-Chat im Sprachkanal, Bühnen-Kanäle mit „Sprechen anfragen"
 - Moderation: Server-Mute/-Taub, Verschieben, Trennen
 
+**Spiele & Clips** (Desktop-App, Einstellungen → Spiele & Clips)
+- **Spiel-Erkennung:** Nook erkennt, was du spielst – bekannte Spiele (Fortnite, VALORANT, LoL, CS2, Minecraft, Roblox, GTA, Apex, Rocket League …) und alles aus Steam, Epic, Xbox, GOG, Ubisoft und EA. Freunde sehen „Spielt Fortnite“ und **wie lange schon** – in der Freundesliste, der Mitgliederliste, im Profil (mit laufender Uhr) und unter „Was gerade läuft“. Abschaltbar; nicht erkannte Spiele fügst du aus der Liste der offenen Programme hinzu, Fehlalarme blendest du mit „Ist kein Spiel“ aus. Eine selbst gesetzte Aktivität hat immer Vorrang.
+- **Clips:** Während eines Spiels (oder auf Wunsch immer) puffert Nook die letzten 15 s bis 2 Min. deines Bildschirms mit Spielton, Freunden im Anruf und auf Wunsch deiner eigenen Stimme – nur im Arbeitsspeicher. Gespeichert wird erst, wenn du clippst: per **Alt+F10** (änderbar, funktioniert mitten im Spiel), mit dem Clip-Knopf oben rechts oder per **Sprachbefehl „Clip das“** / „Nook, clip“ (Windows, offline über die Windows-Spracherkennung, einschaltbar). Die Clips landen als .webm in „Videos/Nook Clips“ (Ordner änderbar). In den Einstellungen kannst du sie abspielen, im Ordner zeigen, direkt an Freunde schicken oder löschen. Qualität von 720p30 bis 1440p60. Auf dem Mac ohne Systemton.
+
 **Profil & Anpassung (alles gratis)**
 - Animierte Avatare & Banner (GIF), **Video-Profilbilder** (MP4/WebM bis 15 s – laufen im Profil, in Listen beim Drüberfahren), Profil-Farbthemen, über 60 Auren um den Avatar (davon 17 mehrschichtig animiert wie Portal, Schwarzes Loch, Engelsflügel, Cyber-HUD), animierte Profilrahmen, Profil-Szenen, Namensbänder, Namens-Stile mit Schrift & Farbverlauf
 - **Live-Animationen** (flüssig auf Canvas, mit Leuchten, Schwerkraft und Tiefe): 14 Profil-Szenen – Feuerwerk, Nordlicht, Galaxienwirbel, Sternschnuppen, Glühwürmchen-Schwarm, Blitzsturm, Schneegestöber, Sakura-Wind, Matrix-Code, Schillernde Blasen, Liebesfunken, Feuersturm, Konfetti-Kanone, Unterwasser – und 6 Auren: Flammenkranz, Lichtorbit, Plasmaring, Sternenwirbel, Blütenwirbel, Eiskristallkranz. Dazu 6 Live-Sets (Inferno, Feuerwerk, Gewitter, Kosmos, Hanami, Polarnacht). Sie laufen nur, solange sie zu sehen sind
@@ -137,7 +141,7 @@ Nook läuft als installierbare Web-App. Voraussetzung ist eine **https**-Adresse
   - Kristalle (Amethyst, Eiskristall, Rubin): facettierte Splitter, die aufblitzen und funkeln
   - Anime (Sakura-Sturm, Fuchsfeuer, Shinobi, Magical Girl, Manga-Action, Katana): kreisende Kirschblüten, flackerndes Fuchsfeuer mit Fuchsohren, wirbelnde Shuriken, Schleife mit funkelnden Sternen, Manga-Speedlines mit „!!"-Blase, gekreuzte Katanas mit Klingenglanz – eigene Motive, keine Serienfiguren
 - Pro-Server-Profil (Nickname, Avatar, Banner, Bio), Pronomen, Bio mit Markdown
-- Status (Online/Abwesend/Bitte nicht stören/Unsichtbar), eigener Status mit Emoji & Ablaufzeit, Aktivität („Spielt …")
+- Status (Online/Abwesend/Bitte nicht stören/Unsichtbar), eigener Status mit Emoji & Ablaufzeit, Aktivität („Spielt …“, auch automatisch erkannt)
 - App-Themes (Tinte, Mitternacht, Dämmerung, Wald, Papier) mit kreisförmigem Überblenden, freie Akzentfarbe, Bubble- oder Kompakt-Layout, Schriftgröße
 - 8 Sound-Pakete (Nook, Kristall, Blubber, Retro, Lo-Fi, Sci-Fi, Marimba, Dezent), eigene Sound-Dateien pro Ereignis (auch als Klingelton), jedes Ereignis einzeln an/aus
 

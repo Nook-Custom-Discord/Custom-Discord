@@ -3,6 +3,18 @@ import { S, update, closeModal, prefs } from './store';
 import { avatarOf, displayName, fileUrl, isVideoUrl } from './api';
 import { Icon } from './icons';
 import { Deco, nameClasses, nameVars } from './cosmetics';
+import { playTime, playClock } from './games';
+
+// Spielzeit, die sich selbst aktualisiert: „seit 12 Min.“ oder als Uhr „1:05:12“
+export function PlayTime({ since, clock = false }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((x) => x + 1), clock ? 1000 : 30000);
+    return () => clearInterval(t);
+  }, [clock]);
+  if (!since) return null;
+  return clock ? playClock(since) : playTime(since);
+}
 
 export const STATUS_LABEL = { online: 'Online', idle: 'Abwesend', dnd: 'Bitte nicht stören', invisible: 'Unsichtbar', offline: 'Offline' };
 

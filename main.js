@@ -1,8 +1,10 @@
 // Electron-Hauptprozess
-const { app, BrowserWindow, ipcMain, desktopCapturer, session, shell, Tray, Menu, nativeImage, systemPreferences, Notification, powerMonitor, globalShortcut, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, desktopCapturer, session, shell, Tray, Menu, nativeImage, systemPreferences, Notification, powerMonitor, globalShortcut, screen, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { GameWatcher } = require('./desktop/games');
+const { ClipVoice } = require('./desktop/clipvoice');
 
 // Chromium-Schalter (je Schalter nur EIN Aufruf – ein zweiter überschreibt den ersten):
 // - Systemton beim Bildschirmteilen auf dem Mac
@@ -39,6 +41,9 @@ let hosted = null;
 let config = null;
 let pendingSource = null;
 let lastSources = new Map();
+let games = null;
+let clipVoice = null;
+let clipHotkey = '';
 
 const iconPath = path.join(__dirname, 'build', 'icon.png');
 
@@ -215,6 +220,13 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
 
+  // Spiel-Erkennung und Sprachbefehl für Clips (starten erst, wenn die Oberfläche sie einschaltet)
+  games = new GameWatcher((g) => win?.webContents.send('game', g), () => config);
+  clipVoice = new ClipVoice({
+    onClip: (text) => win?.webContents.send('hotkey', 'clip', { voice: text }),
+    onStatus: (s) => win?.webContents.send('clip-voice', s),
+  });
+
   // Globale Tastenkürzel: Mikro & Ton auch im Spiel umschalten
   try {
     globalShortcut.register('CommandOrControl+Shift+M', () => win?.webContents.send('hotkey', 'mute'));
@@ -237,6 +249,8 @@ app.on('window-all-closed', () => {
 });
 app.on('will-quit', async () => {
   globalShortcut.unregisterAll();
+  games?.stop();
+  clipVoice?.stop();
   if (hosted) await stopHost();
 });
 
@@ -287,6 +301,10 @@ ipcMain.handle('get-config', () => ({
   // ältere Oberflächen kennen nur „durchsichtig ja/nein“
   transparentSupported: blurSupported(),
   transparent: windowMode() === 'blur',
+  clips: true,
+  clipVoice: process.platform === 'win32',
+  customGames: config.customGames || {},
+  ignoredGames: config.ignoredGames || [],
 }));
 function setWindowMode(mode) {
   config.windowMode = mode === 'blur' || mode === 'live' ? mode : '';
@@ -317,6 +335,126 @@ ipcMain.handle('live-protect', (e, on) => {
   return true;
 });
 ipcMain.on('set-transparent', (e, on) => setWindowMode(on ? 'blur' : ''));
+
+// ---------- Spiele ----------
+ipcMain.handle('games-watch', (e, on) => {
+  if (on) games.start();
+  else games.stop();
+  return games.current;
+});
+// laufende Programme mit Fenster (zum Hinzufügen eines Spiels, das nicht erkannt wurde)
+ipcMain.handle('games-running', async () => {
+  const seen = new Set();
+  const out = [];
+  for (const w of await games.running()) {
+    if (!w.key || seen.has(w.key)) continue;
+    seen.add(w.key);
+    out.push({ key: w.key, title: w.title, game: w.game });
+  }
+  return out;
+});
+// eigenes Spiel eintragen ({ key, name }) oder ein erkanntes ignorieren ({ key, ignore: true })
+ipcMain.handle('games-custom', (e, { key, name, ignore, reset }) => {
+  config.customGames = config.customGames || {};
+  config.ignoredGames = config.ignoredGames || [];
+  if (reset) {
+    config.customGames = {};
+    config.ignoredGames = [];
+  } else if (key) {
+    key = String(key).toLowerCase().slice(0, 120);
+    delete config.customGames[key];
+    config.ignoredGames = config.ignoredGames.filter((k) => k !== key);
+    if (ignore) config.ignoredGames.push(key);
+    else if (name) config.customGames[key] = String(name).slice(0, 80);
+  }
+  writeConfig(config);
+  games.current = null;
+  games.tick();
+  return { customGames: config.customGames, ignoredGames: config.ignoredGames };
+});
+
+// ---------- Clips ----------
+const clipDir = () => config.clipDir || path.join(app.getPath('videos'), 'Nook Clips');
+const inClipDir = (p) => {
+  const f = path.resolve(String(p || ''));
+  return f.startsWith(path.resolve(clipDir()) + path.sep) ? f : null;
+};
+// Quelle des Hauptbildschirms für die Clip-Aufnahme (die Oberfläche nimmt sie per getUserMedia auf)
+ipcMain.handle('clip-prepare', async () => {
+  const d = screen.getPrimaryDisplay();
+  const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } });
+  const src = sources.find((x) => x.display_id === String(d.id)) || sources[0];
+  if (!src) return null;
+  // Systemton gibt es über diesen Weg nur unter Windows
+  return { sourceId: src.id, audio: process.platform === 'win32', width: Math.round(d.size.width * d.scaleFactor), height: Math.round(d.size.height * d.scaleFactor) };
+});
+ipcMain.handle('clip-save', async (e, bytes, name) => {
+  const dir = clipDir();
+  fs.mkdirSync(dir, { recursive: true });
+  const base = String(name || 'Clip').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 90) || 'Clip';
+  let file = path.join(dir, base + '.webm');
+  for (let i = 2; fs.existsSync(file); i++) file = path.join(dir, `${base} (${i}).webm`);
+  await fs.promises.writeFile(file, Buffer.from(bytes));
+  return file;
+});
+ipcMain.handle('clip-list', async () => {
+  const dir = clipDir();
+  let names = [];
+  try {
+    names = (await fs.promises.readdir(dir)).filter((n) => /\.(webm|mp4|mkv)$/i.test(n));
+  } catch {}
+  const list = [];
+  for (const n of names) {
+    try {
+      const st = await fs.promises.stat(path.join(dir, n));
+      list.push({ name: n, path: path.join(dir, n), size: st.size, mtime: st.mtimeMs });
+    } catch {}
+  }
+  return { dir, clips: list.sort((a, b) => b.mtime - a.mtime).slice(0, 40) };
+});
+ipcMain.handle('clip-open', (e, p) => inClipDir(p) && shell.openPath(inClipDir(p)));
+ipcMain.handle('clip-show', (e, p) => inClipDir(p) && shell.showItemInFolder(inClipDir(p)));
+ipcMain.handle('clip-folder', () => {
+  fs.mkdirSync(clipDir(), { recursive: true });
+  return shell.openPath(clipDir());
+});
+ipcMain.handle('clip-remove', async (e, p) => {
+  const f = inClipDir(p);
+  if (f) await shell.trashItem(f);
+  return !!f;
+});
+ipcMain.handle('clip-read', (e, p) => {
+  const f = inClipDir(p);
+  return f ? fs.promises.readFile(f) : null;
+});
+ipcMain.handle('clip-choose-dir', async () => {
+  const r = await dialog.showOpenDialog(win, { title: 'Ordner für Clips', defaultPath: clipDir(), properties: ['openDirectory', 'createDirectory'] });
+  if (r.canceled || !r.filePaths[0]) return clipDir();
+  config.clipDir = r.filePaths[0];
+  writeConfig(config);
+  return clipDir();
+});
+// globales Tastenkürzel für „Clip speichern“ (funktioniert auch mitten im Spiel)
+ipcMain.handle('clip-hotkey', (e, accel) => {
+  if (clipHotkey) {
+    try {
+      globalShortcut.unregister(clipHotkey);
+    } catch {}
+  }
+  clipHotkey = '';
+  if (!accel) return true;
+  try {
+    if (!globalShortcut.register(accel, () => win?.webContents.send('hotkey', 'clip', {}))) return false;
+    clipHotkey = accel;
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle('clip-voice', (e, on) => {
+  clipVoice.set(on);
+  return { supported: clipVoice.supported, ...clipVoice.status };
+});
 ipcMain.handle('set-config', (e, c) => {
   if (c.closeToTray !== undefined) config.closeToTray = !!c.closeToTray;
   if (c.autoStart !== undefined) app.setLoginItemSettings({ openAtLogin: !!c.autoStart, openAsHidden: true });

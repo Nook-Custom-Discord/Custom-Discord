@@ -25,8 +25,26 @@ contextBridge.exposeInMainWorld('nook', {
   isFocused: () => ipcRenderer.invoke('is-focused'),
   idleTime: () => ipcRenderer.invoke('idle-time'),
   notify: (opts) => ipcRenderer.send('notify', opts),
+  games: {
+    watch: (on) => ipcRenderer.invoke('games-watch', !!on),
+    running: () => ipcRenderer.invoke('games-running'),
+    custom: (o) => ipcRenderer.invoke('games-custom', o),
+  },
+  clips: {
+    prepare: () => ipcRenderer.invoke('clip-prepare'),
+    save: (bytes, name) => ipcRenderer.invoke('clip-save', bytes, name),
+    list: () => ipcRenderer.invoke('clip-list'),
+    open: (p) => ipcRenderer.invoke('clip-open', p),
+    show: (p) => ipcRenderer.invoke('clip-show', p),
+    folder: () => ipcRenderer.invoke('clip-folder'),
+    remove: (p) => ipcRenderer.invoke('clip-remove', p),
+    read: (p) => ipcRenderer.invoke('clip-read', p),
+    chooseDir: () => ipcRenderer.invoke('clip-choose-dir'),
+    hotkey: (accel) => ipcRenderer.invoke('clip-hotkey', accel || ''),
+    voice: (on) => ipcRenderer.invoke('clip-voice', !!on),
+  },
   on: (channel, fn) => {
-    const ok = ['focus', 'notification-click', 'system-idle', 'hotkey', 'live-geom'];
+    const ok = ['focus', 'notification-click', 'system-idle', 'hotkey', 'live-geom', 'game', 'clip-voice'];
     if (!ok.includes(channel)) return;
     ipcRenderer.on(channel, (e, ...args) => fn(...args));
   },

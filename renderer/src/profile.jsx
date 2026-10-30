@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import { S, update, prefs, openModal, closeModal, openPopout, toast, confirmDialog } from './store';
 import { act, rpc, openDM, fileUrl, displayName, roleColor, copy, navigate, logout } from './api';
-import { Avatar, Name, NameText, STATUS_LABEL, StatusDot, Modal, ServerIcon, colorFor, tone, SegBox } from './ui';
+import { Avatar, Name, NameText, STATUS_LABEL, StatusDot, Modal, ServerIcon, colorFor, tone, SegBox, PlayTime } from './ui';
 import { EffectLayer, Frame } from './cosmetics';
 import { Icon } from './icons';
 import { Md } from './message';
@@ -59,9 +59,16 @@ export function ProfileCard({ uid, serverId, preview, actions = true, onClose })
           {act0 && (
             <div class="sec">
               <h4>{act0.type || 'Spielt'}</h4>
-              <div class="row">
-                <span style={{ fontSize: 26 }}>🎮</span>
-                <b>{act0.name}</b>
+              <div class="row act-row">
+                <span class="act-ic">🎮</span>
+                <div style={{ minWidth: 0 }}>
+                  <b class="ellipsis" style={{ display: 'block' }}>{act0.name}</b>
+                  {act0.since && (
+                    <span class="act-time">
+                      <PlayTime since={act0.since} clock /> {act0.auto ? 'gespielt' : 'vergangen'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )}

@@ -18,6 +18,7 @@ import { Icon, LogoMark } from './icons';
 import { Md } from './message';
 import { initFx, fadeIn, withTransition } from './fx';
 import { syncGlass, toggleGlass } from './glass';
+import { initClips, CLIP } from './clips';
 
 // ---------- Login ----------
 function Login() {
@@ -476,7 +477,7 @@ function App() {
   );
 }
 
-window.__nook = { S, V };
+window.__nook = { S, V, update, CLIP };
 // ---------- Handy ----------
 // iOS verkleinert beim Einblenden der Tastatur nicht die Seite, sondern schiebt sie nach oben – dann
 // verschwinden Kopfzeile und Eingabefeld. Deshalb wird die Höhe der App an den sichtbaren Bereich gekoppelt.
@@ -530,6 +531,8 @@ window.nook?.on?.('hotkey', (k) => {
   if (k === 'mute') V.toggleMute();
   if (k === 'deafen') V.toggleDeafen();
 });
+// Spiel-Erkennung & Clips (Desktop-App)
+initClips();
 if (S.token && S.serverUrl) {
   connect();
   // ältere Anmeldungen einmal in den Schlüsselbund übernehmen
