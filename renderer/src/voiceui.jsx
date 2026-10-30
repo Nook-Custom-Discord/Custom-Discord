@@ -243,6 +243,11 @@ export function CallControls({ ch, compact }) {
       <button class={`round-btn ${V.camStream ? 'on' : ''}`} data-tip={V.camStream ? 'Kamera aus' : 'Kamera an'} onClick={() => V.toggleCamera()}>
         <Icon name={V.camStream ? 'video' : 'videoOff'} />
       </button>
+      {location.protocol === 'capacitor:' && (
+        <button class="round-btn" data-tip="Anruf-Diagnose" onClick={async () => openModal('confirm', { title: 'Anruf-Diagnose', text: <pre class="call-diag">{await V.diagnose()}</pre>, ok: 'OK', danger: false, resolve: () => {} })}>
+          <Icon name="gear" />
+        </button>
+      )}
       {IS_PHONE && V.camStream && (
         <button class="round-btn" data-tip="Kamera wechseln" onClick={() => V.flipCamera()}>
           <Icon name="flipCam" />

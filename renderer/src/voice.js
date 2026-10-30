@@ -125,10 +125,10 @@ class VoiceEngine {
   }
 
   async wake() {
-    if (!this.channelId || !this.ctx || this.waking) return;
+    if (!this.channelId || (!this.ctx && !NC) || this.waking) return;
     this.waking = true;
     try {
-      if (this.ctx.state !== 'running') await this.ctx.resume().catch(() => {});
+      if (this.ctx && this.ctx.state !== 'running') await this.ctx.resume().catch(() => {});
       const mic = this.micRaw?.getAudioTracks()[0];
       if (!NATIVE_CALL && (!mic || mic.readyState === 'ended' || mic.muted)) await this.startMic();
       const cam = this.camStream?.getVideoTracks()[0];
@@ -155,6 +155,7 @@ class VoiceEngine {
       stopRing();
       await this.setupAudio();
       if (NC) await NC.start({ iceServers: S.iceServers || [], muted: this.muted, deafened: this.deafened });
+      else if (location.protocol === 'capacitor:') toast('Diese App-Version hat noch keine nativen Anrufe – beim Sperren geht der Ton aus. Bitte neueste iPhone-App installieren.', 'error', 8000);
       const ch = S.channels[channelId];
       this.channelId = channelId;
       this.serverId = serverIdOf(ch);
@@ -184,6 +185,22 @@ class VoiceEngine {
     } catch {
       this.leave(true);
     }
+  }
+
+  // Anruf-Diagnose (iPhone-App): Zustand der nativen Erweiterung als Text
+  async diagnose() {
+    const lines = [`Native Anruf-Technik: ${NC ? 'aktiv ✅' : 'NICHT aktiv ❌ (alte App-Version?)'}`, `Im Anruf: ${this.channelId ? 'ja' : 'nein'}`, `Video-Verbindungen: ${[...this.peers.values()].map((p) => p.pc.connectionState).join(', ') || '–'}`];
+    if (NC) {
+      try {
+        const st = await NC.status();
+        lines.push(`Ton-Sitzung: ${st.category} / ${st.mode} · aktiv: ${st.active ? 'ja' : 'nein'} · Ausgabe: ${st.route}`);
+        lines.push(`Sprach-Verbindungen: ${Object.entries(st.peers || {}).map(([u, v]) => `${S.users[u]?.displayName || u}: ${v}`).join(', ') || '–'}`);
+        lines.push('', 'Protokoll:', ...(st.log || []).slice(-15));
+      } catch (e) {
+        lines.push('Status nicht abrufbar (App zu alt): ' + (e.message || e));
+      }
+    }
+    return lines.join('\n');
   }
 
   // iPhone nach dem Entsperren: Die Sprache (nativ) lief weiter – nur die Video-Verbindungen neu aufbauen
@@ -229,6 +246,14 @@ class VoiceEngine {
 
   // ---------- Audio-Graph ----------
   async setupAudio() {
+    // iPhone mit nativer Erweiterung: Die Web-Ansicht fasst während des Anrufs keinen Ton an – iOS schaltet
+    // Web-Audio beim Sperren/Minimieren ab und reißt dabei sonst die native Tonverbindung mit
+    if (NATIVE_CALL) {
+      this.ctx = null;
+      this.micTrack = null;
+      this.sendStream = null;
+      return;
+    }
     this.ctx = new AudioContext({ latencyHint: 'interactive' });
     if (prefs.outputDevice && this.ctx.setSinkId) await this.ctx.setSinkId(prefs.outputDevice).catch(() => {});
     this.master = this.ctx.createGain();
@@ -356,8 +381,8 @@ class VoiceEngine {
   }
 
   tick() {
+    if (NC) return this.channelId && this.tickNative();
     if (!this.ctx) return;
-    if (NC) return this.tickNative();
     const now = performance.now();
     const lvl = this.micRaw ? dbFromAnalyser(this.analyser, this.buf) : -100;
     this.selfLevel = lvl;
@@ -664,8 +689,18 @@ class VoiceEngine {
   }
 
   attachAudio(uid, kind, stream) {
-    if (!this.ctx) return;
     const key = uid + ':' + kind;
+    if (!this.ctx) {
+      // iPhone (nativ): Ton von angesehenen Streams einfach über ein Audio-Element
+      if (!NC) return;
+      this.dropAudio(key);
+      const el = new Audio();
+      el.srcObject = stream;
+      el.volume = Math.min(1, this.volumeFor(uid, kind));
+      el.play().catch(() => {});
+      this.audioNodes[key] = { el };
+      return;
+    }
     this.dropAudio(key);
     const el = new Audio();
     el.srcObject = stream;
@@ -686,8 +721,9 @@ class VoiceEngine {
     const n = this.audioNodes[key];
     if (!n) return;
     try {
-      n.src.disconnect();
-      n.g.disconnect();
+      n.src?.disconnect();
+      n.g?.disconnect();
+      n.el.pause?.();
       n.el.srcObject = null;
     } catch {}
     delete this.audioNodes[key];
@@ -915,6 +951,7 @@ class VoiceEngine {
 
   // ---------- Soundboard ----------
   async playSound(sound) {
+    if (NC && this.channelId) return toast('Die Klangbox gibt es am iPhone während Anrufen (noch) nicht', 'error');
     if (!this.ctx) return toast('Tritt erst einem Sprachkanal bei', 'error');
     try {
       let buf = this.soundCache.get(sound.url);
@@ -981,5 +1018,7 @@ function isTyping(e) {
 }
 
 export const V = new VoiceEngine();
+// Für sounds.js: Während nativer iPhone-Anrufe keine Web-Töne abspielen (siehe setupAudio)
+window.__nookNativeCall = () => NATIVE_CALL && !!V.channelId;
 bindVoice(V);
 window.addEventListener('beforeunload', () => V.channelId && rpc('voiceLeave', {}).catch(() => {}));

@@ -246,6 +246,8 @@ function play(name, packId = prefs.soundPack) {
 }
 
 export function soundEnabled(name) {
+  // iPhone-App im nativen Anruf: keine Web-Töne (würden beim Sperren den Anruf-Ton mit abschalten)
+  if (window.__nookNativeCall?.()) return false;
   return prefs.sounds && prefs.soundEvents?.[name] !== false;
 }
 

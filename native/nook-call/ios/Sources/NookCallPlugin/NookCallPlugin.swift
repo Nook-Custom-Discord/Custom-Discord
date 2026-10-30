@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import UIKit
 import Capacitor
 import WebRTC
 
@@ -22,7 +23,130 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setMuted", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setDeafened", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "levels", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "status", returnType: CAPPluginReturnPromise),
     ]
+
+    // ---------- Ton am Leben halten ----------
+    // iOS (bzw. die Web-Ansicht) kann die Ton-Sitzung beim Minimieren/Sperren umstellen oder abschalten.
+    // Ein Wächter prüft das laufend und holt sich den Ton sofort zurück.
+    private var log: [String] = []
+    private var watchdog: Timer?
+    private var observers: [NSObjectProtocol] = []
+    private var bgTask: UIBackgroundTaskIdentifier = .invalid
+
+    fileprivate func note(_ text: String) {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss"
+        log.append("\(f.string(from: Date())) \(text)")
+        if log.count > 60 { log.removeFirst(log.count - 60) }
+        print("NookCall: \(text)")
+    }
+
+    private var inCall: Bool { audioTrack != nil }
+
+    private func startGuard() {
+        guard watchdog == nil else { return }
+        let center = NotificationCenter.default
+        observers.append(center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let self = self, self.inCall else { return }
+            self.note("App im Hintergrund")
+            // Kurze Schonfrist von iOS, falls der Ton gerade neu gestartet werden muss
+            if self.bgTask == .invalid {
+                self.bgTask = UIApplication.shared.beginBackgroundTask(withName: "NookCall") { [weak self] in
+                    guard let self = self else { return }
+                    UIApplication.shared.endBackgroundTask(self.bgTask)
+                    self.bgTask = .invalid
+                }
+            }
+            for delay in [0.15, 0.5, 1.0, 2.0, 4.0] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in self?.checkAudio(reason: "Hintergrund") }
+            }
+        })
+        observers.append(center.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let self = self, self.inCall else { return }
+            self.note("App wieder vorne")
+            self.checkAudio(reason: "Vordergrund")
+            if self.bgTask != .invalid {
+                UIApplication.shared.endBackgroundTask(self.bgTask)
+                self.bgTask = .invalid
+            }
+        })
+        observers.append(center.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] n in
+            guard let self = self, self.inCall else { return }
+            let raw = n.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt ?? 0
+            let type = AVAudioSession.InterruptionType(rawValue: raw)
+            self.note(type == .began ? "Ton unterbrochen (iOS)" : "Unterbrechung vorbei")
+            if type == .ended {
+                self.reassert(reason: "nach Unterbrechung")
+            } else {
+                // z. B. Web-Ansicht hat sich den Ton geschnappt -> kurz danach zurückholen
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in self?.checkAudio(reason: "Unterbrechung") }
+            }
+        })
+        observers.append(center.addObserver(forName: AVAudioSession.routeChangeNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let self = self, self.inCall else { return }
+            self.note("Ausgabe: \(self.routeName())")
+        })
+        observers.append(center.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let self = self, self.inCall else { return }
+            self.note("iOS-Tondienst neu gestartet")
+            self.reassert(reason: "Tondienst-Neustart")
+        })
+        watchdog = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+            self?.checkAudio(reason: "Wächter")
+        }
+    }
+
+    private func stopGuard() {
+        watchdog?.invalidate()
+        watchdog = nil
+        for o in observers { NotificationCenter.default.removeObserver(o) }
+        observers.removeAll()
+        if bgTask != .invalid {
+            UIApplication.shared.endBackgroundTask(bgTask)
+            bgTask = .invalid
+        }
+    }
+
+    private func checkAudio(reason: String) {
+        guard inCall else { return }
+        let session = AVAudioSession.sharedInstance()
+        let rtc = RTCAudioSession.sharedInstance()
+        if session.category != .playAndRecord || !rtc.isActive || !rtc.isAudioEnabled {
+            note("Ton weg (\(reason)): \(session.category.rawValue), aktiv=\(rtc.isActive)")
+            reassert(reason: reason)
+        }
+    }
+
+    private func reassert(reason: String) {
+        guard inCall else { return }
+        configureAudio()
+        let rtc = RTCAudioSession.sharedInstance()
+        // Audio-Einheit neu anstoßen
+        rtc.isAudioEnabled = false
+        rtc.isAudioEnabled = true
+        note("Ton neu gestartet (\(reason)) -> aktiv=\(rtc.isActive)")
+    }
+
+    private func routeName() -> String {
+        AVAudioSession.sharedInstance().currentRoute.outputs.map { $0.portName }.joined(separator: ", ")
+    }
+
+    @objc func status(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            let session = AVAudioSession.sharedInstance()
+            var peerStates = JSObject()
+            for (uid, peer) in self.peers { peerStates[uid] = peer.stateName }
+            call.resolve([
+                "category": session.category.rawValue,
+                "mode": session.mode.rawValue,
+                "active": RTCAudioSession.sharedInstance().isActive,
+                "route": self.routeName(),
+                "peers": peerStates,
+                "log": self.log,
+            ])
+        }
+    }
 
     private static let factory: RTCPeerConnectionFactory = {
         RTCInitializeSSL()
@@ -48,22 +172,30 @@ public class NookCallPlugin: CAPPlugin, CAPBridgedPlugin {
             }
             self.muted = muted
             self.deafened = deafened
+            // Ton-Einheit selbst steuern, damit sie nach einer Unterbrechung neu angestoßen werden kann
+            RTCAudioSession.sharedInstance().useManualAudio = true
             self.configureAudio()
             if self.audioTrack == nil {
                 let constraints = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
                 let source = NookCallPlugin.factory.audioSource(with: constraints)
                 self.audioTrack = NookCallPlugin.factory.audioTrack(with: source, trackId: "nook-mic")
             }
+            RTCAudioSession.sharedInstance().isAudioEnabled = true
             self.applyMute()
+            self.startGuard()
+            self.note("Anruf gestartet, Ausgabe: \(self.routeName())")
             call.resolve()
         }
     }
 
     @objc func stop(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
+            self.stopGuard()
             for peer in self.peers.values { peer.close() }
             self.peers.removeAll()
             self.audioTrack = nil
+            self.note("Anruf beendet")
+            RTCAudioSession.sharedInstance().isAudioEnabled = false
             let session = RTCAudioSession.sharedInstance()
             session.lockForConfiguration()
             do { try session.setActive(false) } catch { print("NookCall: Audio aus fehlgeschlagen: \(error)") }
@@ -246,6 +378,7 @@ final class NookPeer: NSObject, RTCPeerConnectionDelegate {
     var pc: RTCPeerConnection?
     var remoteSet = false
     var pending: [RTCIceCandidate] = []
+    var stateName = "neu"
     private var offers = 0
     private var closed = false
     private var restartWork: DispatchWorkItem?
@@ -324,6 +457,16 @@ final class NookPeer: NSObject, RTCPeerConnectionDelegate {
     func peerConnection(_ peerConnection: RTCPeerConnection, didChange newState: RTCIceConnectionState) {
         DispatchQueue.main.async {
             guard !self.closed else { return }
+            switch newState {
+            case .new: self.stateName = "neu"
+            case .checking: self.stateName = "verbindet"
+            case .connected, .completed: self.stateName = "verbunden"
+            case .failed: self.stateName = "fehlgeschlagen"
+            case .disconnected: self.stateName = "getrennt"
+            case .closed: self.stateName = "geschlossen"
+            default: self.stateName = "?"
+            }
+            self.plugin?.note("Verbindung \(self.uid.prefix(6)): \(self.stateName)")
             switch newState {
             case .connected, .completed:
                 self.restartWork?.cancel()
