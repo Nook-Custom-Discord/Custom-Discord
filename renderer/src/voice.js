@@ -3,7 +3,7 @@
 import { S, update, prefs, setPref, toast } from './store';
 import { rpc, bindVoice, fileUrl, displayName, serverIdOf, channelTitle, allSounds } from './api';
 import { sfx, stopRing } from './sounds';
-import { NC } from './native';
+import { NC, NA, IS_APP, IS_IOS_APP } from './native';
 
 export const QUALITY = {
   '720p30': { label: '720p · 30 FPS', w: 1280, h: 720, fps: 30, br: 4_000_000 },
@@ -17,7 +17,7 @@ export const QUALITY = {
 };
 
 // Handy (iPhone-App, Handy-Browser): andere Kamera-Einstellungen, kein Bildschirm teilen
-export const IS_PHONE = location.protocol === 'capacitor:' || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export const IS_PHONE = IS_APP || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 export const CAN_SHARE_SCREEN = !!navigator.mediaDevices?.getDisplayMedia && !IS_PHONE;
 // iPhone-App mit nativer Sprach-Erweiterung: Mikro und Ton laufen dort auch bei gesperrtem Bildschirm weiter.
 // Die Sprache geht dann über eine eigene Verbindung („Spur a“), Kamera und Streams wie bisher über die Web-Ansicht.
@@ -165,8 +165,10 @@ class VoiceEngine {
         this.joinedAt = Date.now();
         await NC.start({ iceServers: S.iceServers || [], muted: this.muted, deafened: this.deafened, name: channelTitle(S.channels[channelId]) || 'Nook' });
       }
-      else if (location.protocol === 'capacitor:') toast('Diese App-Version hat noch keine nativen Anrufe – beim Sperren geht der Ton aus. Bitte neueste iPhone-App installieren.', 'error', 8000);
+      else if (IS_IOS_APP) toast('Diese App-Version hat noch keine nativen Anrufe – beim Sperren geht der Ton aus. Bitte neueste iPhone-App installieren.', 'error', 8000);
       const ch = S.channels[channelId];
+      // Android-App: Vordergrund-Dienst, damit Mikro und Ton bei gesperrtem Bildschirm weiterlaufen
+      NA?.callStarted({ name: channelTitle(ch) || 'Nook' }).catch(() => {});
       this.channelId = channelId;
       this.serverId = serverIdOf(ch);
       const res = await rpc('voiceJoin', { channelId, muted: this.muted, deafened: this.deafened, keepAlive: NATIVE_CALL });
@@ -260,6 +262,7 @@ class VoiceEngine {
     this.stopLoops();
     this.teardownAudio();
     NC?.stop().catch(() => {});
+    NA?.callEnded().catch(() => {});
     if (!silent) sfx('leave');
     else sfx('hangup');
     update();

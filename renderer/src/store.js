@@ -106,7 +106,7 @@ export function savePrefs() {
 }
 
 export const S = {
-  serverUrl: localStorage.getItem('nook.server') || (location.protocol.startsWith('http') ? location.origin : ''),
+  serverUrl: localStorage.getItem('nook.server') || (location.protocol.startsWith('http') && !/NookApp/.test(navigator.userAgent) ? location.origin : ''),
   token: localStorage.getItem('nook.token') || '',
   conn: 'idle',
   iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],

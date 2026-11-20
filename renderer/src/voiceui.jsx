@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useLayoutEffect } from 'preact/hooks';
 import { S, update, prefs, setPref, openModal, closeModal, openPopout, openMenu, toast } from './store';
 import { act, rpc, displayName, channelTitle, serverIdOf, voiceMembers, can, P, navigate, dismissCall, avatarOf, isVideoUrl, openDM, isElectron } from './api';
 import { V, QUALITY, IS_PHONE, CAN_SHARE_SCREEN, NATIVE_CALL } from './voice';
+import { NA, IS_APP, IS_IOS_APP } from './native';
 import { Avatar, Modal, Seg, SegBox, Video, Name, Spinner, ServerIcon } from './ui';
 import { Icon } from './icons';
 import { ChatView } from './chat';
@@ -233,7 +234,9 @@ function BackgroundAudioHint({ ch }) {
     const t = setInterval(() => tick((x) => x + 1), 2000);
     return () => clearInterval(t);
   }, []);
-  if (location.protocol !== 'capacitor:') return null;
+  if (!IS_APP) return null;
+  // Android: der Ton läuft in der Web-Ansicht, ein Vordergrund-Dienst hält ihn bei gesperrtem Bildschirm am Leben
+  if (!IS_IOS_APP) return NA ? <div class="bg-audio-hint ok">🔒 Ton läuft auch bei gesperrtem Handy weiter</div> : null;
   if (!NATIVE_CALL) return <div class="bg-audio-hint warn">⚠️ Diese App-Version kann keinen Ton im Hintergrund – bitte die neueste iPhone-App aufspielen</div>;
   const others = voiceMembers(ch.id).map((m) => m.uid).filter((u) => u !== S.me.id);
   if (!others.length) return null;
@@ -265,7 +268,7 @@ export function CallControls({ ch, compact }) {
       <button class={`round-btn ${V.camStream ? 'on' : ''}`} data-tip={V.camStream ? 'Kamera aus' : 'Kamera an'} onClick={() => V.toggleCamera()}>
         <Icon name={V.camStream ? 'video' : 'videoOff'} />
       </button>
-      {location.protocol === 'capacitor:' && (
+      {IS_APP && (
         <button class="round-btn" data-tip="Anruf-Diagnose" onClick={async () => openModal('confirm', { title: 'Anruf-Diagnose', text: <pre class="call-diag">{await V.diagnose()}</pre>, ok: 'OK', danger: false, resolve: () => {} })}>
           <Icon name="gear" />
         </button>

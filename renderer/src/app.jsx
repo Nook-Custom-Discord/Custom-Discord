@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'preact/hooks';
 import { S, update, prefs, setPref, useStore, openModal, toast } from './store';
 import { auth, connect, normServer, isElectron, navigate, channelTitle, serverIdOf, can, P, rpc, act, sortedChannels, displayName, voiceMembers, openDM, dmList } from './api';
 import { V, IS_PHONE } from './voice';
-import { loadNativeLogin, saveNativeLogin, clearNativeLogin } from './native';
+import { loadNativeLogin, saveNativeLogin, clearNativeLogin, IS_APP } from './native';
 import { TopBar, HomeSidebar, ServerSidebar, MemberList } from './sidebar';
 import { ChatView, SidePanel, runSearch } from './chat';
 import { FriendsView } from './friends';
@@ -23,7 +23,7 @@ import { initClips, CLIP } from './clips';
 // ---------- Login ----------
 function Login() {
   const [mode, setMode] = useState('login');
-  const [server, setServer] = useState(S.serverUrl || (isElectron ? 'http://localhost:3500' : /^https?:$/.test(location.protocol) ? location.origin : ''));
+  const [server, setServer] = useState(S.serverUrl || (isElectron ? 'http://localhost:3500' : /^https?:$/.test(location.protocol) && !IS_APP ? location.origin : ''));
   const [username, setUsername] = useState('');
   const [displayName0, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
@@ -434,8 +434,8 @@ function App() {
           <LogoMark size={36} />
         </div>
         <div>{S.conn === 'reconnecting' ? `Server ${S.serverUrl} nicht erreichbar – versuche erneut …` : 'Verbinde …'}</div>
-        {S.conn === 'reconnecting' && location.protocol === 'capacitor:' && (
-          <div class="hint" style={{ maxWidth: 300, textAlign: 'center' }}>Ist Tailscale am iPhone eingeschaltet? Sobald der Server erreichbar ist, verbindet sich Nook von selbst – du bleibst angemeldet.</div>
+        {S.conn === 'reconnecting' && IS_APP && (
+          <div class="hint" style={{ maxWidth: 300, textAlign: 'center' }}>Ist Tailscale am Handy eingeschaltet? Sobald der Server erreichbar ist, verbindet sich Nook von selbst – du bleibst angemeldet.</div>
         )}
         {S.conn === 'reconnecting' && (
           <button class="btn ghost sm" onClick={() => { localStorage.removeItem('nook.token'); clearNativeLogin(); location.reload(); }}>
@@ -483,7 +483,7 @@ window.__nook = { S, V, update, CLIP };
 // verschwinden Kopfzeile und Eingabefeld. Deshalb wird die Höhe der App an den sichtbaren Bereich gekoppelt.
 if (IS_PHONE) {
   document.body.classList.add('is-phone');
-  if (location.protocol === 'capacitor:') document.body.classList.add('is-app');
+  if (IS_APP) document.body.classList.add('is-app');
   const vv = window.visualViewport;
   const fit = () => {
     const h = vv ? vv.height : innerHeight;

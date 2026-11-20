@@ -6,5 +6,10 @@
     "contentInset": "never",
     "backgroundColor": "#100e17",
     "limitsNavigationsToAppBoundDomains": false
+  },
+  "android": {
+    "backgroundColor": "#100e17",
+    "appendUserAgent": "NookApp",
+    "allowMixedContent": true
   }
 }

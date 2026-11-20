@@ -1,0 +1,48 @@
+name: Android-App bauen
+
+# Start per Hand: Actions → „Android-App bauen" → Run workflow.
+# Ergebnis: Nook-Android-<version>.apk unten beim Lauf unter „Artifacts" – siehe ANDROID.md.
+on:
+  workflow_dispatch:
+  push:
+    branches: [android]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: npm install --no-audit --no-fund
+      - run: npm run mobile:prepare
+      - run: npx cap add android
+      - run: npx cap sync android
+      - run: bash scripts/android-build.sh
+        env:
+          NOOK_KEYSTORE_B64: ${{ secrets.NOOK_KEYSTORE_B64 }}
+          NOOK_KEYSTORE_PASSWORD: ${{ secrets.NOOK_KEYSTORE_PASSWORD }}
+          NOOK_KEY_ALIAS: ${{ secrets.NOOK_KEY_ALIAS }}
+          NOOK_KEY_PASSWORD: ${{ secrets.NOOK_KEY_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nook-Android
+          path: dist/*.apk
+      # Bei Fehlern: Protokoll zum Weiterschicken
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Build-Protokoll
+          path: dist/build-log.txt
+          if-no-files-found: ignore
